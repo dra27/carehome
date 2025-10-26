@@ -1,0 +1,52 @@
+From 2d74528e9c303233e5ee4e7190eaf3dd98831808 Mon Sep 17 00:00:00 2001
+From: Docker <docker@example.com>
+Date: Fri, 24 Oct 2025 16:49:58 +0100
+Subject: [PATCH] Patch
+
+---
+ configure    | 7 ++++++-
+ configure.ac | 7 ++++++-
+ 2 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/configure b/configure
+index 1e348dd991..059163811e 100755
+--- a/configure
++++ b/configure
+@@ -12423,9 +12423,14 @@ $as_echo "$as_me: WARNING: Consider using GCC version 4.2 or above." >&2;};
+     common_cflags="-std=gnu99 -O2 -fno-strict-aliasing -fwrapv \
+ -fno-builtin-memcmp";
+       internal_cflags="$gcc_warnings" ;; #(
+-  gcc-*) :
++  gcc-[56789]-*|gcc-1[01234]-*) :
+     common_cflags="-O2 -fno-strict-aliasing -fwrapv";
+       internal_cflags="$gcc_warnings" ;; #(
++  gcc-*) :
++    common_cflags="-O2 -fno-strict-aliasing -fwrapv";
++      mv bytecomp/bytelink.ml bytecomp/bytelink.ml.old
++      sed -e 's/compile_file/& ~opt:"-std=gnu17"/' bytecomp/bytelink.ml.old > bytecomp/bytelink.ml
++      internal_cflags="-std=gnu17 $gcc_warnings" ;; #(
+   msvc-*) :
+     common_cflags="-nologo -O2 -Gy- -MD"
+       common_cppflags="-D_CRT_SECURE_NO_DEPRECATE"
+diff --git a/configure.ac b/configure.ac
+index 0985cf9450..af612e5231 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -539,9 +539,14 @@ AS_CASE([$host],
+       [common_cflags="-std=gnu99 -O2 -fno-strict-aliasing -fwrapv \
+ -fno-builtin-memcmp";
+       internal_cflags="$gcc_warnings"],
+-    [gcc-*],
++    [gcc-[[56789]]-*|gcc-1[[01234]]-*],
+       [common_cflags="-O2 -fno-strict-aliasing -fwrapv";
+       internal_cflags="$gcc_warnings"],
++    [gcc-*],
++      [common_cflags="-O2 -fno-strict-aliasing -fwrapv";
++      mv bytecomp/bytelink.ml bytecomp/bytelink.ml.old
++      sed -e 's/compile_file/& ~opt:"-std=gnu17"/' bytecomp/bytelink.ml.old > bytecomp/bytelink.ml
++      internal_cflags="-std=gnu17 $gcc_warnings"],
+     [msvc-*],
+       [common_cflags="-nologo -O2 -Gy- -MD"
+       common_cppflags="-D_CRT_SECURE_NO_DEPRECATE"
+-- 
+2.51.0

@@ -1,0 +1,1052 @@
+FROM ocaml/opam:ubuntu-25.04-opam AS cache
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout $opam_repository && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update
+RUN for v in $(seq 0 3); do opam source ocaml-config.$v; done
+RUN opam source ocaml-base-compiler.3.07+2
+RUN opam source ocaml-base-compiler.3.08.4
+RUN opam source ocaml-base-compiler.3.09.3
+RUN opam source ocaml-base-compiler.3.10.2
+RUN opam source ocaml-base-compiler.3.11.2
+RUN opam source ocaml-base-compiler.3.12.1
+RUN opam source ocaml-base-compiler.4.00.1
+RUN opam source ocaml-base-compiler.4.01.0
+RUN opam source ocaml-base-compiler.4.02.3
+RUN opam source ocaml-base-compiler.4.03.0
+RUN opam source ocaml-base-compiler.4.04.2
+RUN opam source ocaml-base-compiler.4.05.0
+RUN opam source ocaml-base-compiler.4.06.1
+RUN opam source ocaml-base-compiler.4.07.1
+RUN opam source ocaml-base-compiler.4.08.1
+RUN opam source ocaml-base-compiler.4.09.1
+RUN opam source ocaml-base-compiler.4.10.2
+RUN opam source ocaml-base-compiler.4.11.2
+RUN opam source ocaml-base-compiler.4.12.1
+RUN opam source ocaml-base-compiler.4.13.1
+RUN opam source ocaml-base-compiler.4.14.2
+RUN opam source ocaml-base-compiler.5.0.0
+RUN opam source ocaml-base-compiler.5.1.1
+RUN opam source ocaml-base-compiler.5.2.1
+RUN opam source ocaml-base-compiler.5.3.0
+RUN opam source ocaml-base-compiler.5.4.0
+FROM ocaml/opam:alpine-3.20-opam AS alpine-3.20
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.3 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM alpine-3.20 AS alpine-3.07
+RUN opam switch create ocaml ocaml-base-compiler.3.07+2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-3.08
+RUN opam switch create ocaml ocaml-base-compiler.3.08.4
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-3.09
+RUN opam switch create ocaml ocaml-base-compiler.3.09.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-3.10
+RUN opam switch create ocaml ocaml-base-compiler.3.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-3.11
+RUN opam switch create ocaml ocaml-base-compiler.3.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-3.12
+RUN opam switch create ocaml ocaml-base-compiler.3.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-4.00
+RUN opam switch create ocaml ocaml-base-compiler.4.00.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-4.01
+RUN opam switch create ocaml ocaml-base-compiler.4.01.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-4.02
+RUN opam switch create ocaml ocaml-base-compiler.4.02.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-4.03
+RUN opam switch create ocaml ocaml-base-compiler.4.03.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-4.04
+RUN opam switch create ocaml ocaml-base-compiler.4.04.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-4.05
+RUN opam switch create ocaml ocaml-base-compiler.4.05.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-4.06
+RUN opam switch create ocaml ocaml-base-compiler.4.06.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.20 AS alpine-4.07
+RUN opam switch create ocaml ocaml-base-compiler.4.07.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:alpine-3.22-opam AS alpine-3.22
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM alpine-3.22 AS alpine-4.08
+RUN opam switch create ocaml ocaml-base-compiler.4.08.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.22 AS alpine-4.09
+RUN opam switch create ocaml ocaml-base-compiler.4.09.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.22 AS alpine-4.10
+RUN opam switch create ocaml ocaml-base-compiler.4.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.22 AS alpine-4.11
+RUN opam switch create ocaml ocaml-base-compiler.4.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.22 AS alpine-4.12
+RUN opam switch create ocaml ocaml-base-compiler.4.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.22 AS alpine-4.13
+RUN opam switch create ocaml ocaml-base-compiler.4.13.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.22 AS alpine-4.14
+RUN opam switch create ocaml ocaml-base-compiler.4.14.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.22 AS alpine-5.0
+RUN opam switch create ocaml ocaml-base-compiler.5.0.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.22 AS alpine-5.1
+RUN opam switch create ocaml ocaml-base-compiler.5.1.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.22 AS alpine-5.2
+RUN opam switch create ocaml ocaml-base-compiler.5.2.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.22 AS alpine-5.3
+RUN opam switch create ocaml ocaml-base-compiler.5.3.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM alpine-3.22 AS alpine-5.4
+RUN opam switch create ocaml ocaml-base-compiler.5.4.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:archlinux-opam AS archlinux
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM archlinux AS arch-4.14
+RUN opam switch create ocaml ocaml-base-compiler.4.14.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM archlinux AS arch-5.1
+RUN opam switch create ocaml ocaml-base-compiler.5.1.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM archlinux AS arch-5.2
+RUN opam switch create ocaml ocaml-base-compiler.5.2.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM archlinux AS arch-5.3
+RUN opam switch create ocaml ocaml-base-compiler.5.3.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM archlinux AS arch-5.4
+RUN opam switch create ocaml ocaml-base-compiler.5.4.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:centos-9-opam AS centos-9
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM centos-9 AS centos-3.07
+RUN opam switch create ocaml ocaml-base-compiler.3.07+2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-3.08
+RUN opam switch create ocaml ocaml-base-compiler.3.08.4
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-3.09
+RUN opam switch create ocaml ocaml-base-compiler.3.09.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-3.10
+RUN opam switch create ocaml ocaml-base-compiler.3.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-3.11
+RUN opam switch create ocaml ocaml-base-compiler.3.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-3.12
+RUN opam switch create ocaml ocaml-base-compiler.3.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-4.00
+RUN opam switch create ocaml ocaml-base-compiler.4.00.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-4.01
+RUN opam switch create ocaml ocaml-base-compiler.4.01.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-4.02
+RUN opam switch create ocaml ocaml-base-compiler.4.02.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-4.03
+RUN opam switch create ocaml ocaml-base-compiler.4.03.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-4.04
+RUN opam switch create ocaml ocaml-base-compiler.4.04.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-4.05
+RUN opam switch create ocaml ocaml-base-compiler.4.05.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-4.06
+RUN opam switch create ocaml ocaml-base-compiler.4.06.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-9 AS centos-4.07
+RUN opam switch create ocaml ocaml-base-compiler.4.07.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:centos-10-opam AS centos-10
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM centos-10 AS centos-4.08
+RUN opam switch create ocaml ocaml-base-compiler.4.08.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-10 AS centos-4.09
+RUN opam switch create ocaml ocaml-base-compiler.4.09.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-10 AS centos-4.10
+RUN opam switch create ocaml ocaml-base-compiler.4.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-10 AS centos-4.11
+RUN opam switch create ocaml ocaml-base-compiler.4.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-10 AS centos-4.12
+RUN opam switch create ocaml ocaml-base-compiler.4.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-10 AS centos-4.13
+RUN opam switch create ocaml ocaml-base-compiler.4.13.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-10 AS centos-4.14
+RUN opam switch create ocaml ocaml-base-compiler.4.14.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-10 AS centos-5.0
+RUN opam switch create ocaml ocaml-base-compiler.5.0.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-10 AS centos-5.1
+RUN opam switch create ocaml ocaml-base-compiler.5.1.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-10 AS centos-5.2
+RUN opam switch create ocaml ocaml-base-compiler.5.2.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-10 AS centos-5.3
+RUN opam switch create ocaml ocaml-base-compiler.5.3.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM centos-10 AS centos-5.4
+RUN opam switch create ocaml ocaml-base-compiler.5.4.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:debian-12-opam AS debian-12
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM debian-12 AS debian-3.07
+RUN opam switch create ocaml ocaml-base-compiler.3.07+2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-3.08
+RUN opam switch create ocaml ocaml-base-compiler.3.08.4
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-3.09
+RUN opam switch create ocaml ocaml-base-compiler.3.09.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-3.10
+RUN opam switch create ocaml ocaml-base-compiler.3.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-3.11
+RUN opam switch create ocaml ocaml-base-compiler.3.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-3.12
+RUN opam switch create ocaml ocaml-base-compiler.3.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-4.00
+RUN opam switch create ocaml ocaml-base-compiler.4.00.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-4.01
+RUN opam switch create ocaml ocaml-base-compiler.4.01.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-4.02
+RUN opam switch create ocaml ocaml-base-compiler.4.02.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-4.03
+RUN opam switch create ocaml ocaml-base-compiler.4.03.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-4.04
+RUN opam switch create ocaml ocaml-base-compiler.4.04.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-4.05
+RUN opam switch create ocaml ocaml-base-compiler.4.05.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-4.06
+RUN opam switch create ocaml ocaml-base-compiler.4.06.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-12 AS debian-4.07
+RUN opam switch create ocaml ocaml-base-compiler.4.07.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:debian-13-opam AS debian-13
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM debian-13 AS debian-4.08
+RUN opam switch create ocaml ocaml-base-compiler.4.08.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-13 AS debian-4.09
+RUN opam switch create ocaml ocaml-base-compiler.4.09.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-13 AS debian-4.10
+RUN opam switch create ocaml ocaml-base-compiler.4.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-13 AS debian-4.11
+RUN opam switch create ocaml ocaml-base-compiler.4.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-13 AS debian-4.12
+RUN opam switch create ocaml ocaml-base-compiler.4.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-13 AS debian-4.13
+RUN opam switch create ocaml ocaml-base-compiler.4.13.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-13 AS debian-4.14
+RUN opam switch create ocaml ocaml-base-compiler.4.14.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-13 AS debian-5.0
+RUN opam switch create ocaml ocaml-base-compiler.5.0.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-13 AS debian-5.1
+RUN opam switch create ocaml ocaml-base-compiler.5.1.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-13 AS debian-5.2
+RUN opam switch create ocaml ocaml-base-compiler.5.2.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-13 AS debian-5.3
+RUN opam switch create ocaml ocaml-base-compiler.5.3.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM debian-13 AS debian-5.4
+RUN opam switch create ocaml ocaml-base-compiler.5.4.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:fedora-39-opam AS fedora-39
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.2 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM fedora-39 AS fedora-3.07
+RUN opam switch create ocaml ocaml-base-compiler.3.07+2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-3.08
+RUN opam switch create ocaml ocaml-base-compiler.3.08.4
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-3.09
+RUN opam switch create ocaml ocaml-base-compiler.3.09.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-3.10
+RUN opam switch create ocaml ocaml-base-compiler.3.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-3.11
+RUN opam switch create ocaml ocaml-base-compiler.3.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-3.12
+RUN opam switch create ocaml ocaml-base-compiler.3.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-4.00
+RUN opam switch create ocaml ocaml-base-compiler.4.00.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-4.01
+RUN opam switch create ocaml ocaml-base-compiler.4.01.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-4.02
+RUN opam switch create ocaml ocaml-base-compiler.4.02.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-4.03
+RUN opam switch create ocaml ocaml-base-compiler.4.03.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-4.04
+RUN opam switch create ocaml ocaml-base-compiler.4.04.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-4.05
+RUN opam switch create ocaml ocaml-base-compiler.4.05.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-4.06
+RUN opam switch create ocaml ocaml-base-compiler.4.06.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-39 AS fedora-4.07
+RUN opam switch create ocaml ocaml-base-compiler.4.07.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:fedora-41-opam AS fedora-41
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM fedora-41 AS fedora-4.08
+RUN opam switch create ocaml ocaml-base-compiler.4.08.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-41 AS fedora-4.09
+RUN opam switch create ocaml ocaml-base-compiler.4.09.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-41 AS fedora-4.10
+RUN opam switch create ocaml ocaml-base-compiler.4.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-41 AS fedora-4.11
+RUN opam switch create ocaml ocaml-base-compiler.4.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-41 AS fedora-4.12
+RUN opam switch create ocaml ocaml-base-compiler.4.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-41 AS fedora-4.13
+RUN opam switch create ocaml ocaml-base-compiler.4.13.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:fedora-43-opam AS fedora-43
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM fedora-43 AS fedora-4.14
+RUN opam switch create ocaml ocaml-base-compiler.4.14.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-41 AS fedora-5.0
+RUN opam switch create ocaml ocaml-base-compiler.5.0.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-43 AS fedora-5.1
+RUN opam switch create ocaml ocaml-base-compiler.5.1.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-43 AS fedora-5.2
+RUN opam switch create ocaml ocaml-base-compiler.5.2.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-43 AS fedora-5.3
+RUN opam switch create ocaml ocaml-base-compiler.5.3.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM fedora-43 AS fedora-5.4
+RUN opam switch create ocaml ocaml-base-compiler.5.4.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-15.6
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM opensuse-15.6 AS opensuse-3.07
+RUN opam switch create ocaml ocaml-base-compiler.3.07+2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-3.08
+RUN opam switch create ocaml ocaml-base-compiler.3.08.4
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-3.09
+RUN opam switch create ocaml ocaml-base-compiler.3.09.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-3.10
+RUN opam switch create ocaml ocaml-base-compiler.3.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-3.11
+RUN opam switch create ocaml ocaml-base-compiler.3.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-3.12
+RUN opam switch create ocaml ocaml-base-compiler.3.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.00
+RUN opam switch create ocaml ocaml-base-compiler.4.00.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.01
+RUN opam switch create ocaml ocaml-base-compiler.4.01.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.02
+RUN opam switch create ocaml ocaml-base-compiler.4.02.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.03
+RUN opam switch create ocaml ocaml-base-compiler.4.03.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.04
+RUN opam switch create ocaml ocaml-base-compiler.4.04.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.05
+RUN opam switch create ocaml ocaml-base-compiler.4.05.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.06
+RUN opam switch create ocaml ocaml-base-compiler.4.06.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.07
+RUN opam switch create ocaml ocaml-base-compiler.4.07.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.08
+RUN opam switch create ocaml ocaml-base-compiler.4.08.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.09
+RUN opam switch create ocaml ocaml-base-compiler.4.09.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.10
+RUN opam switch create ocaml ocaml-base-compiler.4.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.11
+RUN opam switch create ocaml ocaml-base-compiler.4.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.12
+RUN opam switch create ocaml ocaml-base-compiler.4.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-4.13
+RUN opam switch create ocaml ocaml-base-compiler.4.13.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:opensuse-16.0-opam AS opensuse-16.0
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM opensuse-16.0 AS opensuse-4.14
+RUN opam switch create ocaml ocaml-base-compiler.4.14.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-15.6 AS opensuse-5.0
+RUN opam switch create ocaml ocaml-base-compiler.5.0.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-16.0 AS opensuse-5.1
+RUN opam switch create ocaml ocaml-base-compiler.5.1.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-16.0 AS opensuse-5.2
+RUN opam switch create ocaml ocaml-base-compiler.5.2.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-16.0 AS opensuse-5.3
+RUN opam switch create ocaml ocaml-base-compiler.5.3.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM opensuse-16.0 AS opensuse-5.4
+RUN opam switch create ocaml ocaml-base-compiler.5.4.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:oraclelinux-9-opam AS oraclelinux-9
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM oraclelinux-9 AS oraclelinux-3.07
+RUN opam switch create ocaml ocaml-base-compiler.3.07+2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-3.08
+RUN opam switch create ocaml ocaml-base-compiler.3.08.4
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-3.09
+RUN opam switch create ocaml ocaml-base-compiler.3.09.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-3.10
+RUN opam switch create ocaml ocaml-base-compiler.3.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-3.11
+RUN opam switch create ocaml ocaml-base-compiler.3.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-3.12
+RUN opam switch create ocaml ocaml-base-compiler.3.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-4.00
+RUN opam switch create ocaml ocaml-base-compiler.4.00.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-4.01
+RUN opam switch create ocaml ocaml-base-compiler.4.01.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-4.02
+RUN opam switch create ocaml ocaml-base-compiler.4.02.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-4.03
+RUN opam switch create ocaml ocaml-base-compiler.4.03.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-4.04
+RUN opam switch create ocaml ocaml-base-compiler.4.04.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-4.05
+RUN opam switch create ocaml ocaml-base-compiler.4.05.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-4.06
+RUN opam switch create ocaml ocaml-base-compiler.4.06.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-9 AS oraclelinux-4.07
+RUN opam switch create ocaml ocaml-base-compiler.4.07.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-10
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM oraclelinux-10 AS oraclelinux-4.08
+RUN opam switch create ocaml ocaml-base-compiler.4.08.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-10 AS oraclelinux-4.09
+RUN opam switch create ocaml ocaml-base-compiler.4.09.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-10 AS oraclelinux-4.10
+RUN opam switch create ocaml ocaml-base-compiler.4.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-10 AS oraclelinux-4.11
+RUN opam switch create ocaml ocaml-base-compiler.4.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-10 AS oraclelinux-4.12
+RUN opam switch create ocaml ocaml-base-compiler.4.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-10 AS oraclelinux-4.13
+RUN opam switch create ocaml ocaml-base-compiler.4.13.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-10 AS oraclelinux-4.14
+RUN opam switch create ocaml ocaml-base-compiler.4.14.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-10 AS oraclelinux-5.0
+RUN opam switch create ocaml ocaml-base-compiler.5.0.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-10 AS oraclelinux-5.1
+RUN opam switch create ocaml ocaml-base-compiler.5.1.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-10 AS oraclelinux-5.2
+RUN opam switch create ocaml ocaml-base-compiler.5.2.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-10 AS oraclelinux-5.3
+RUN opam switch create ocaml ocaml-base-compiler.5.3.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM oraclelinux-10 AS oraclelinux-5.4
+RUN opam switch create ocaml ocaml-base-compiler.5.4.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:ubuntu-24.04-opam AS ubuntu-24.04
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM ubuntu-24.04 AS ubuntu-3.07
+RUN opam switch create ocaml ocaml-base-compiler.3.07+2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-3.08
+RUN opam switch create ocaml ocaml-base-compiler.3.08.4
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-3.09
+RUN opam switch create ocaml ocaml-base-compiler.3.09.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-3.10
+RUN opam switch create ocaml ocaml-base-compiler.3.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-3.11
+RUN opam switch create ocaml ocaml-base-compiler.3.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-3.12
+RUN opam switch create ocaml ocaml-base-compiler.3.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-4.00
+RUN opam switch create ocaml ocaml-base-compiler.4.00.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-4.01
+RUN opam switch create ocaml ocaml-base-compiler.4.01.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-4.02
+RUN opam switch create ocaml ocaml-base-compiler.4.02.3
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-4.03
+RUN opam switch create ocaml ocaml-base-compiler.4.03.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-4.04
+RUN opam switch create ocaml ocaml-base-compiler.4.04.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-4.05
+RUN opam switch create ocaml ocaml-base-compiler.4.05.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-4.06
+RUN opam switch create ocaml ocaml-base-compiler.4.06.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-24.04 AS ubuntu-4.07
+RUN opam switch create ocaml ocaml-base-compiler.4.07.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:ubuntu-25.04-opam AS ubuntu-25.04
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM ubuntu-25.04 AS ubuntu-4.08
+RUN opam switch create ocaml ocaml-base-compiler.4.08.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-25.04 AS ubuntu-4.09
+RUN opam switch create ocaml ocaml-base-compiler.4.09.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-25.04 AS ubuntu-4.10
+RUN opam switch create ocaml ocaml-base-compiler.4.10.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-25.04 AS ubuntu-4.11
+RUN opam switch create ocaml ocaml-base-compiler.4.11.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-25.04 AS ubuntu-4.12
+RUN opam switch create ocaml ocaml-base-compiler.4.12.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-25.04 AS ubuntu-4.13
+RUN opam switch create ocaml ocaml-base-compiler.4.13.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:ubuntu-25.10-opam AS ubuntu-25.10
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN git -C opam-repository fetch origin && git -C opam-repository checkout c603e596bfaf195a5c1a3baf992b11c1de5ad35b && sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam && opam update && rm -rf .opam/download-cache
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+
+FROM ubuntu-25.10 AS ubuntu-4.14
+RUN opam switch create ocaml ocaml-base-compiler.4.14.2
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-25.04 AS ubuntu-5.0
+RUN opam switch create ocaml ocaml-base-compiler.5.0.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-25.10 AS ubuntu-5.1
+RUN opam switch create ocaml ocaml-base-compiler.5.1.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-25.10 AS ubuntu-5.2
+RUN opam switch create ocaml ocaml-base-compiler.5.2.1
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-25.10 AS ubuntu-5.3
+RUN opam switch create ocaml ocaml-base-compiler.5.3.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ubuntu-25.10 AS ubuntu-5.4
+RUN opam switch create ocaml ocaml-base-compiler.5.4.0
+RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
+
+FROM ocaml/opam:ubuntu-25.10-opam AS collect
+RUN --mount=from=alpine-3.07,src=/home/opam,dst=/mnt/opam-Alpine-3.07 \
+    --mount=from=alpine-3.08,src=/home/opam,dst=/mnt/opam-Alpine-3.08 \
+    --mount=from=alpine-3.09,src=/home/opam,dst=/mnt/opam-Alpine-3.09 \
+    --mount=from=alpine-3.10,src=/home/opam,dst=/mnt/opam-Alpine-3.10 \
+    --mount=from=alpine-3.11,src=/home/opam,dst=/mnt/opam-Alpine-3.11 \
+    --mount=from=alpine-3.12,src=/home/opam,dst=/mnt/opam-Alpine-3.12 \
+    --mount=from=alpine-4.00,src=/home/opam,dst=/mnt/opam-Alpine-4.00 \
+    --mount=from=alpine-4.01,src=/home/opam,dst=/mnt/opam-Alpine-4.01 \
+    --mount=from=alpine-4.02,src=/home/opam,dst=/mnt/opam-Alpine-4.02 \
+    --mount=from=alpine-4.03,src=/home/opam,dst=/mnt/opam-Alpine-4.03 \
+    --mount=from=alpine-4.04,src=/home/opam,dst=/mnt/opam-Alpine-4.04 \
+    --mount=from=alpine-4.05,src=/home/opam,dst=/mnt/opam-Alpine-4.05 \
+    --mount=from=alpine-4.06,src=/home/opam,dst=/mnt/opam-Alpine-4.06 \
+    --mount=from=alpine-4.07,src=/home/opam,dst=/mnt/opam-Alpine-4.07 \
+    --mount=from=alpine-4.08,src=/home/opam,dst=/mnt/opam-Alpine-4.08 \
+    --mount=from=alpine-4.09,src=/home/opam,dst=/mnt/opam-Alpine-4.09 \
+    --mount=from=alpine-4.10,src=/home/opam,dst=/mnt/opam-Alpine-4.10 \
+    --mount=from=alpine-4.11,src=/home/opam,dst=/mnt/opam-Alpine-4.11 \
+    --mount=from=alpine-4.12,src=/home/opam,dst=/mnt/opam-Alpine-4.12 \
+    --mount=from=alpine-4.13,src=/home/opam,dst=/mnt/opam-Alpine-4.13 \
+    --mount=from=alpine-4.14,src=/home/opam,dst=/mnt/opam-Alpine-4.14 \
+    --mount=from=alpine-5.0,src=/home/opam,dst=/mnt/opam-Alpine-5.0 \
+    --mount=from=alpine-5.1,src=/home/opam,dst=/mnt/opam-Alpine-5.1 \
+    --mount=from=alpine-5.2,src=/home/opam,dst=/mnt/opam-Alpine-5.2 \
+    --mount=from=alpine-5.3,src=/home/opam,dst=/mnt/opam-Alpine-5.3 \
+    --mount=from=alpine-5.4,src=/home/opam,dst=/mnt/opam-Alpine-5.4 \
+    --mount=from=arch-4.14,src=/home/opam,dst=/mnt/opam-Arch-4.14 \
+    --mount=from=arch-5.1,src=/home/opam,dst=/mnt/opam-Arch-5.1 \
+    --mount=from=arch-5.2,src=/home/opam,dst=/mnt/opam-Arch-5.2 \
+    --mount=from=arch-5.3,src=/home/opam,dst=/mnt/opam-Arch-5.3 \
+    --mount=from=arch-5.4,src=/home/opam,dst=/mnt/opam-Arch-5.4 \
+    --mount=from=centos-3.07,src=/home/opam,dst=/mnt/opam-CentOS-3.07 \
+    --mount=from=centos-3.08,src=/home/opam,dst=/mnt/opam-CentOS-3.08 \
+    --mount=from=centos-3.09,src=/home/opam,dst=/mnt/opam-CentOS-3.09 \
+    --mount=from=centos-3.10,src=/home/opam,dst=/mnt/opam-CentOS-3.10 \
+    --mount=from=centos-3.11,src=/home/opam,dst=/mnt/opam-CentOS-3.11 \
+    --mount=from=centos-3.12,src=/home/opam,dst=/mnt/opam-CentOS-3.12 \
+    --mount=from=centos-4.00,src=/home/opam,dst=/mnt/opam-CentOS-4.00 \
+    --mount=from=centos-4.01,src=/home/opam,dst=/mnt/opam-CentOS-4.01 \
+    --mount=from=centos-4.02,src=/home/opam,dst=/mnt/opam-CentOS-4.02 \
+    --mount=from=centos-4.03,src=/home/opam,dst=/mnt/opam-CentOS-4.03 \
+    --mount=from=centos-4.04,src=/home/opam,dst=/mnt/opam-CentOS-4.04 \
+    --mount=from=centos-4.05,src=/home/opam,dst=/mnt/opam-CentOS-4.05 \
+    --mount=from=centos-4.06,src=/home/opam,dst=/mnt/opam-CentOS-4.06 \
+    --mount=from=centos-4.07,src=/home/opam,dst=/mnt/opam-CentOS-4.07 \
+    --mount=from=centos-4.08,src=/home/opam,dst=/mnt/opam-CentOS-4.08 \
+    --mount=from=centos-4.09,src=/home/opam,dst=/mnt/opam-CentOS-4.09 \
+    --mount=from=centos-4.10,src=/home/opam,dst=/mnt/opam-CentOS-4.10 \
+    --mount=from=centos-4.11,src=/home/opam,dst=/mnt/opam-CentOS-4.11 \
+    --mount=from=centos-4.12,src=/home/opam,dst=/mnt/opam-CentOS-4.12 \
+    --mount=from=centos-4.13,src=/home/opam,dst=/mnt/opam-CentOS-4.13 \
+    --mount=from=centos-4.14,src=/home/opam,dst=/mnt/opam-CentOS-4.14 \
+    --mount=from=centos-5.0,src=/home/opam,dst=/mnt/opam-CentOS-5.0 \
+    --mount=from=centos-5.1,src=/home/opam,dst=/mnt/opam-CentOS-5.1 \
+    --mount=from=centos-5.2,src=/home/opam,dst=/mnt/opam-CentOS-5.2 \
+    --mount=from=centos-5.3,src=/home/opam,dst=/mnt/opam-CentOS-5.3 \
+    --mount=from=centos-5.4,src=/home/opam,dst=/mnt/opam-CentOS-5.4 \
+    --mount=from=debian-3.07,src=/home/opam,dst=/mnt/opam-Debian-3.07 \
+    --mount=from=debian-3.08,src=/home/opam,dst=/mnt/opam-Debian-3.08 \
+    --mount=from=debian-3.09,src=/home/opam,dst=/mnt/opam-Debian-3.09 \
+    --mount=from=debian-3.10,src=/home/opam,dst=/mnt/opam-Debian-3.10 \
+    --mount=from=debian-3.11,src=/home/opam,dst=/mnt/opam-Debian-3.11 \
+    --mount=from=debian-3.12,src=/home/opam,dst=/mnt/opam-Debian-3.12 \
+    --mount=from=debian-4.00,src=/home/opam,dst=/mnt/opam-Debian-4.00 \
+    --mount=from=debian-4.01,src=/home/opam,dst=/mnt/opam-Debian-4.01 \
+    --mount=from=debian-4.02,src=/home/opam,dst=/mnt/opam-Debian-4.02 \
+    --mount=from=debian-4.03,src=/home/opam,dst=/mnt/opam-Debian-4.03 \
+    --mount=from=debian-4.04,src=/home/opam,dst=/mnt/opam-Debian-4.04 \
+    --mount=from=debian-4.05,src=/home/opam,dst=/mnt/opam-Debian-4.05 \
+    --mount=from=debian-4.06,src=/home/opam,dst=/mnt/opam-Debian-4.06 \
+    --mount=from=debian-4.07,src=/home/opam,dst=/mnt/opam-Debian-4.07 \
+    --mount=from=debian-4.08,src=/home/opam,dst=/mnt/opam-Debian-4.08 \
+    --mount=from=debian-4.09,src=/home/opam,dst=/mnt/opam-Debian-4.09 \
+    --mount=from=debian-4.10,src=/home/opam,dst=/mnt/opam-Debian-4.10 \
+    --mount=from=debian-4.11,src=/home/opam,dst=/mnt/opam-Debian-4.11 \
+    --mount=from=debian-4.12,src=/home/opam,dst=/mnt/opam-Debian-4.12 \
+    --mount=from=debian-4.13,src=/home/opam,dst=/mnt/opam-Debian-4.13 \
+    --mount=from=debian-4.14,src=/home/opam,dst=/mnt/opam-Debian-4.14 \
+    --mount=from=debian-5.0,src=/home/opam,dst=/mnt/opam-Debian-5.0 \
+    --mount=from=debian-5.1,src=/home/opam,dst=/mnt/opam-Debian-5.1 \
+    --mount=from=debian-5.2,src=/home/opam,dst=/mnt/opam-Debian-5.2 \
+    --mount=from=debian-5.3,src=/home/opam,dst=/mnt/opam-Debian-5.3 \
+    --mount=from=debian-5.4,src=/home/opam,dst=/mnt/opam-Debian-5.4 \
+    --mount=from=fedora-3.07,src=/home/opam,dst=/mnt/opam-Fedora-3.07 \
+    --mount=from=fedora-3.08,src=/home/opam,dst=/mnt/opam-Fedora-3.08 \
+    --mount=from=fedora-3.09,src=/home/opam,dst=/mnt/opam-Fedora-3.09 \
+    --mount=from=fedora-3.10,src=/home/opam,dst=/mnt/opam-Fedora-3.10 \
+    --mount=from=fedora-3.11,src=/home/opam,dst=/mnt/opam-Fedora-3.11 \
+    --mount=from=fedora-3.12,src=/home/opam,dst=/mnt/opam-Fedora-3.12 \
+    --mount=from=fedora-4.00,src=/home/opam,dst=/mnt/opam-Fedora-4.00 \
+    --mount=from=fedora-4.01,src=/home/opam,dst=/mnt/opam-Fedora-4.01 \
+    --mount=from=fedora-4.02,src=/home/opam,dst=/mnt/opam-Fedora-4.02 \
+    --mount=from=fedora-4.03,src=/home/opam,dst=/mnt/opam-Fedora-4.03 \
+    --mount=from=fedora-4.04,src=/home/opam,dst=/mnt/opam-Fedora-4.04 \
+    --mount=from=fedora-4.05,src=/home/opam,dst=/mnt/opam-Fedora-4.05 \
+    --mount=from=fedora-4.06,src=/home/opam,dst=/mnt/opam-Fedora-4.06 \
+    --mount=from=fedora-4.07,src=/home/opam,dst=/mnt/opam-Fedora-4.07 \
+    --mount=from=fedora-4.08,src=/home/opam,dst=/mnt/opam-Fedora-4.08 \
+    --mount=from=fedora-4.09,src=/home/opam,dst=/mnt/opam-Fedora-4.09 \
+    --mount=from=fedora-4.10,src=/home/opam,dst=/mnt/opam-Fedora-4.10 \
+    --mount=from=fedora-4.11,src=/home/opam,dst=/mnt/opam-Fedora-4.11 \
+    --mount=from=fedora-4.12,src=/home/opam,dst=/mnt/opam-Fedora-4.12 \
+    --mount=from=fedora-4.13,src=/home/opam,dst=/mnt/opam-Fedora-4.13 \
+    --mount=from=fedora-4.14,src=/home/opam,dst=/mnt/opam-Fedora-4.14 \
+    --mount=from=fedora-5.0,src=/home/opam,dst=/mnt/opam-Fedora-5.0 \
+    --mount=from=fedora-5.1,src=/home/opam,dst=/mnt/opam-Fedora-5.1 \
+    --mount=from=fedora-5.2,src=/home/opam,dst=/mnt/opam-Fedora-5.2 \
+    --mount=from=fedora-5.3,src=/home/opam,dst=/mnt/opam-Fedora-5.3 \
+    --mount=from=fedora-5.4,src=/home/opam,dst=/mnt/opam-Fedora-5.4 \
+    --mount=from=opensuse-3.07,src=/home/opam,dst=/mnt/opam-openSUSE-3.07 \
+    --mount=from=opensuse-3.08,src=/home/opam,dst=/mnt/opam-openSUSE-3.08 \
+    --mount=from=opensuse-3.09,src=/home/opam,dst=/mnt/opam-openSUSE-3.09 \
+    --mount=from=opensuse-3.10,src=/home/opam,dst=/mnt/opam-openSUSE-3.10 \
+    --mount=from=opensuse-3.11,src=/home/opam,dst=/mnt/opam-openSUSE-3.11 \
+    --mount=from=opensuse-3.12,src=/home/opam,dst=/mnt/opam-openSUSE-3.12 \
+    --mount=from=opensuse-4.00,src=/home/opam,dst=/mnt/opam-openSUSE-4.00 \
+    --mount=from=opensuse-4.01,src=/home/opam,dst=/mnt/opam-openSUSE-4.01 \
+    --mount=from=opensuse-4.02,src=/home/opam,dst=/mnt/opam-openSUSE-4.02 \
+    --mount=from=opensuse-4.03,src=/home/opam,dst=/mnt/opam-openSUSE-4.03 \
+    --mount=from=opensuse-4.04,src=/home/opam,dst=/mnt/opam-openSUSE-4.04 \
+    --mount=from=opensuse-4.05,src=/home/opam,dst=/mnt/opam-openSUSE-4.05 \
+    --mount=from=opensuse-4.06,src=/home/opam,dst=/mnt/opam-openSUSE-4.06 \
+    --mount=from=opensuse-4.07,src=/home/opam,dst=/mnt/opam-openSUSE-4.07 \
+    --mount=from=opensuse-4.08,src=/home/opam,dst=/mnt/opam-openSUSE-4.08 \
+    --mount=from=opensuse-4.09,src=/home/opam,dst=/mnt/opam-openSUSE-4.09 \
+    --mount=from=opensuse-4.10,src=/home/opam,dst=/mnt/opam-openSUSE-4.10 \
+    --mount=from=opensuse-4.11,src=/home/opam,dst=/mnt/opam-openSUSE-4.11 \
+    --mount=from=opensuse-4.12,src=/home/opam,dst=/mnt/opam-openSUSE-4.12 \
+    --mount=from=opensuse-4.13,src=/home/opam,dst=/mnt/opam-openSUSE-4.13 \
+    --mount=from=opensuse-4.14,src=/home/opam,dst=/mnt/opam-openSUSE-4.14 \
+    --mount=from=opensuse-5.0,src=/home/opam,dst=/mnt/opam-openSUSE-5.0 \
+    --mount=from=opensuse-5.1,src=/home/opam,dst=/mnt/opam-openSUSE-5.1 \
+    --mount=from=opensuse-5.2,src=/home/opam,dst=/mnt/opam-openSUSE-5.2 \
+    --mount=from=opensuse-5.3,src=/home/opam,dst=/mnt/opam-openSUSE-5.3 \
+    --mount=from=opensuse-5.4,src=/home/opam,dst=/mnt/opam-openSUSE-5.4 \
+    --mount=from=oraclelinux-3.07,src=/home/opam,dst=/mnt/opam-OracleLinux-3.07 \
+    --mount=from=oraclelinux-3.08,src=/home/opam,dst=/mnt/opam-OracleLinux-3.08 \
+    --mount=from=oraclelinux-3.09,src=/home/opam,dst=/mnt/opam-OracleLinux-3.09 \
+    --mount=from=oraclelinux-3.10,src=/home/opam,dst=/mnt/opam-OracleLinux-3.10 \
+    --mount=from=oraclelinux-3.11,src=/home/opam,dst=/mnt/opam-OracleLinux-3.11 \
+    --mount=from=oraclelinux-3.12,src=/home/opam,dst=/mnt/opam-OracleLinux-3.12 \
+    --mount=from=oraclelinux-4.00,src=/home/opam,dst=/mnt/opam-OracleLinux-4.00 \
+    --mount=from=oraclelinux-4.01,src=/home/opam,dst=/mnt/opam-OracleLinux-4.01 \
+    --mount=from=oraclelinux-4.02,src=/home/opam,dst=/mnt/opam-OracleLinux-4.02 \
+    --mount=from=oraclelinux-4.03,src=/home/opam,dst=/mnt/opam-OracleLinux-4.03 \
+    --mount=from=oraclelinux-4.04,src=/home/opam,dst=/mnt/opam-OracleLinux-4.04 \
+    --mount=from=oraclelinux-4.05,src=/home/opam,dst=/mnt/opam-OracleLinux-4.05 \
+    --mount=from=oraclelinux-4.06,src=/home/opam,dst=/mnt/opam-OracleLinux-4.06 \
+    --mount=from=oraclelinux-4.07,src=/home/opam,dst=/mnt/opam-OracleLinux-4.07 \
+    --mount=from=oraclelinux-4.08,src=/home/opam,dst=/mnt/opam-OracleLinux-4.08 \
+    --mount=from=oraclelinux-4.09,src=/home/opam,dst=/mnt/opam-OracleLinux-4.09 \
+    --mount=from=oraclelinux-4.10,src=/home/opam,dst=/mnt/opam-OracleLinux-4.10 \
+    --mount=from=oraclelinux-4.11,src=/home/opam,dst=/mnt/opam-OracleLinux-4.11 \
+    --mount=from=oraclelinux-4.12,src=/home/opam,dst=/mnt/opam-OracleLinux-4.12 \
+    --mount=from=oraclelinux-4.13,src=/home/opam,dst=/mnt/opam-OracleLinux-4.13 \
+    --mount=from=oraclelinux-4.14,src=/home/opam,dst=/mnt/opam-OracleLinux-4.14 \
+    --mount=from=oraclelinux-5.0,src=/home/opam,dst=/mnt/opam-OracleLinux-5.0 \
+    --mount=from=oraclelinux-5.1,src=/home/opam,dst=/mnt/opam-OracleLinux-5.1 \
+    --mount=from=oraclelinux-5.2,src=/home/opam,dst=/mnt/opam-OracleLinux-5.2 \
+    --mount=from=oraclelinux-5.3,src=/home/opam,dst=/mnt/opam-OracleLinux-5.3 \
+    --mount=from=oraclelinux-5.4,src=/home/opam,dst=/mnt/opam-OracleLinux-5.4 \
+    --mount=from=ubuntu-3.07,src=/home/opam,dst=/mnt/opam-Ubuntu-3.07 \
+    --mount=from=ubuntu-3.08,src=/home/opam,dst=/mnt/opam-Ubuntu-3.08 \
+    --mount=from=ubuntu-3.09,src=/home/opam,dst=/mnt/opam-Ubuntu-3.09 \
+    --mount=from=ubuntu-3.10,src=/home/opam,dst=/mnt/opam-Ubuntu-3.10 \
+    --mount=from=ubuntu-3.11,src=/home/opam,dst=/mnt/opam-Ubuntu-3.11 \
+    --mount=from=ubuntu-3.12,src=/home/opam,dst=/mnt/opam-Ubuntu-3.12 \
+    --mount=from=ubuntu-4.00,src=/home/opam,dst=/mnt/opam-Ubuntu-4.00 \
+    --mount=from=ubuntu-4.01,src=/home/opam,dst=/mnt/opam-Ubuntu-4.01 \
+    --mount=from=ubuntu-4.02,src=/home/opam,dst=/mnt/opam-Ubuntu-4.02 \
+    --mount=from=ubuntu-4.03,src=/home/opam,dst=/mnt/opam-Ubuntu-4.03 \
+    --mount=from=ubuntu-4.04,src=/home/opam,dst=/mnt/opam-Ubuntu-4.04 \
+    --mount=from=ubuntu-4.05,src=/home/opam,dst=/mnt/opam-Ubuntu-4.05 \
+    --mount=from=ubuntu-4.06,src=/home/opam,dst=/mnt/opam-Ubuntu-4.06 \
+    --mount=from=ubuntu-4.07,src=/home/opam,dst=/mnt/opam-Ubuntu-4.07 \
+    --mount=from=ubuntu-4.08,src=/home/opam,dst=/mnt/opam-Ubuntu-4.08 \
+    --mount=from=ubuntu-4.09,src=/home/opam,dst=/mnt/opam-Ubuntu-4.09 \
+    --mount=from=ubuntu-4.10,src=/home/opam,dst=/mnt/opam-Ubuntu-4.10 \
+    --mount=from=ubuntu-4.11,src=/home/opam,dst=/mnt/opam-Ubuntu-4.11 \
+    --mount=from=ubuntu-4.12,src=/home/opam,dst=/mnt/opam-Ubuntu-4.12 \
+    --mount=from=ubuntu-4.13,src=/home/opam,dst=/mnt/opam-Ubuntu-4.13 \
+    --mount=from=ubuntu-4.14,src=/home/opam,dst=/mnt/opam-Ubuntu-4.14 \
+    --mount=from=ubuntu-5.0,src=/home/opam,dst=/mnt/opam-Ubuntu-5.0 \
+    --mount=from=ubuntu-5.1,src=/home/opam,dst=/mnt/opam-Ubuntu-5.1 \
+    --mount=from=ubuntu-5.2,src=/home/opam,dst=/mnt/opam-Ubuntu-5.2 \
+    --mount=from=ubuntu-5.3,src=/home/opam,dst=/mnt/opam-Ubuntu-5.3 \
+    --mount=from=ubuntu-5.4,src=/home/opam,dst=/mnt/opam-Ubuntu-5.4 \
+    cat /mnt/opam-*/vnum > /home/opam/results

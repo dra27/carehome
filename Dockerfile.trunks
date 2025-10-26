@@ -1,0 +1,1063 @@
+FROM ocaml/opam:ubuntu-25.04-opam AS cache
+RUN git clone -o upstream https://github.com/ocaml/ocaml.git && git -C ocaml checkout fe9e6f41d0942869bf95a43c3244ffe237f9439e
+FROM ocaml/opam:alpine-3.20-opam AS alpine-3.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 3.12 upstream/3.12
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.12-opam AS alpine-4.00
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.00 upstream/4.00
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.12-opam AS alpine-4.01
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.01 upstream/4.01
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.20-opam AS alpine-4.02
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.02 upstream/4.02
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.20-opam AS alpine-4.03
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.03 upstream/4.03
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.20-opam AS alpine-4.04
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.04 upstream/4.04
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.20-opam AS alpine-4.05
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.05 upstream/4.05
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.20-opam AS alpine-4.06
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.06 upstream/4.06
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.20-opam AS alpine-4.07
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.07 upstream/4.07
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-4.08
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.08 upstream/4.08
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-4.09
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.09 upstream/4.09
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-4.10
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.10 upstream/4.10
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-4.11
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.11 upstream/4.11
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-4.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.12 upstream/4.12
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-4.13
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.13 upstream/4.13
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-4.14
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.14 upstream/4.14
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-5.0
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.0 upstream/5.0
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-5.1
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.1 upstream/5.1
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-5.2
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.2 upstream/5.2
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-5.3
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.3 upstream/5.3
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:alpine-3.22-opam AS alpine-5.4
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.4 upstream/5.4
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:archlinux-opam AS arch-4.14
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.14 upstream/4.14
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:archlinux-opam AS arch-5.0
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.0 upstream/5.0
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:archlinux-opam AS arch-5.1
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.1 upstream/5.1
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:archlinux-opam AS arch-5.2
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.2 upstream/5.2
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:archlinux-opam AS arch-5.3
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.3 upstream/5.3
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:archlinux-opam AS arch-5.4
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.4 upstream/5.4
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-9-opam AS centos-3.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 3.12 upstream/3.12
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-8-opam AS centos-4.00
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.00 upstream/4.00
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-8-opam AS centos-4.01
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.01 upstream/4.01
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-9-opam AS centos-4.02
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.02 upstream/4.02
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-9-opam AS centos-4.03
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.03 upstream/4.03
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-9-opam AS centos-4.04
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.04 upstream/4.04
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-9-opam AS centos-4.05
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.05 upstream/4.05
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-9-opam AS centos-4.06
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.06 upstream/4.06
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-9-opam AS centos-4.07
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.07 upstream/4.07
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-4.08
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.08 upstream/4.08
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-4.09
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.09 upstream/4.09
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-4.10
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.10 upstream/4.10
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-4.11
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.11 upstream/4.11
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-4.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.12 upstream/4.12
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-4.13
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.13 upstream/4.13
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-4.14
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.14 upstream/4.14
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-5.0
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.0 upstream/5.0
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-5.1
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.1 upstream/5.1
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-5.2
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.2 upstream/5.2
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-5.3
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.3 upstream/5.3
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:centos-10-opam AS centos-5.4
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.4 upstream/5.4
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-12-opam AS debian-3.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 3.12 upstream/3.12
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-10-opam AS debian-4.00
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.00 upstream/4.00
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-10-opam AS debian-4.01
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.01 upstream/4.01
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-12-opam AS debian-4.02
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.02 upstream/4.02
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-12-opam AS debian-4.03
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.03 upstream/4.03
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-12-opam AS debian-4.04
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.04 upstream/4.04
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-12-opam AS debian-4.05
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.05 upstream/4.05
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-12-opam AS debian-4.06
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.06 upstream/4.06
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-12-opam AS debian-4.07
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.07 upstream/4.07
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-4.08
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.08 upstream/4.08
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-4.09
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.09 upstream/4.09
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-4.10
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.10 upstream/4.10
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-4.11
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.11 upstream/4.11
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-4.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.12 upstream/4.12
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-4.13
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.13 upstream/4.13
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-4.14
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.14 upstream/4.14
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-5.0
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.0 upstream/5.0
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-5.1
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.1 upstream/5.1
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-5.2
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.2 upstream/5.2
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-5.3
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.3 upstream/5.3
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:debian-13-opam AS debian-5.4
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.4 upstream/5.4
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-39-opam AS fedora-3.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 3.12 upstream/3.12
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-39-opam AS fedora-4.02
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.02 upstream/4.02
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-39-opam AS fedora-4.03
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.03 upstream/4.03
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-39-opam AS fedora-4.04
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.04 upstream/4.04
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-39-opam AS fedora-4.05
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.05 upstream/4.05
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-39-opam AS fedora-4.06
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.06 upstream/4.06
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-39-opam AS fedora-4.07
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.07 upstream/4.07
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-41-opam AS fedora-4.08
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.08 upstream/4.08
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-41-opam AS fedora-4.09
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.09 upstream/4.09
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-41-opam AS fedora-4.10
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.10 upstream/4.10
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-41-opam AS fedora-4.11
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.11 upstream/4.11
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-41-opam AS fedora-4.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.12 upstream/4.12
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-41-opam AS fedora-4.13
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.13 upstream/4.13
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-43-opam AS fedora-4.14
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.14 upstream/4.14
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-43-opam AS fedora-5.0
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.0 upstream/5.0
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-43-opam AS fedora-5.1
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.1 upstream/5.1
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-43-opam AS fedora-5.2
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.2 upstream/5.2
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-43-opam AS fedora-5.3
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.3 upstream/5.3
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:fedora-43-opam AS fedora-5.4
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.4 upstream/5.4
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-3.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 3.12 upstream/3.12
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.00
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.00 upstream/4.00
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.01
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.01 upstream/4.01
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.02
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.02 upstream/4.02
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.03
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.03 upstream/4.03
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.04
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.04 upstream/4.04
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.05
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.05 upstream/4.05
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.06
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.06 upstream/4.06
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.07
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.07 upstream/4.07
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.08
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.08 upstream/4.08
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.09
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.09 upstream/4.09
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.10
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.10 upstream/4.10
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.11
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.11 upstream/4.11
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.12 upstream/4.12
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-15.6-opam AS opensuse-4.13
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.13 upstream/4.13
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-16.0-opam AS opensuse-4.14
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.14 upstream/4.14
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-16.0-opam AS opensuse-5.0
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.0 upstream/5.0
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-16.0-opam AS opensuse-5.1
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.1 upstream/5.1
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-16.0-opam AS opensuse-5.2
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.2 upstream/5.2
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-16.0-opam AS opensuse-5.3
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.3 upstream/5.3
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:opensuse-16.0-opam AS opensuse-5.4
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.4 upstream/5.4
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-9-opam AS oraclelinux-3.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 3.12 upstream/3.12
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-8-opam AS oraclelinux-4.00
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.00 upstream/4.00
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-8-opam AS oraclelinux-4.01
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.01 upstream/4.01
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-9-opam AS oraclelinux-4.02
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.02 upstream/4.02
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-9-opam AS oraclelinux-4.03
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.03 upstream/4.03
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-9-opam AS oraclelinux-4.04
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.04 upstream/4.04
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-9-opam AS oraclelinux-4.05
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.05 upstream/4.05
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-9-opam AS oraclelinux-4.06
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.06 upstream/4.06
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-9-opam AS oraclelinux-4.07
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.07 upstream/4.07
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-4.08
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.08 upstream/4.08
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-4.09
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.09 upstream/4.09
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-4.10
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.10 upstream/4.10
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-4.11
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.11 upstream/4.11
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-4.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.12 upstream/4.12
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-4.13
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.13 upstream/4.13
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-4.14
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.14 upstream/4.14
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-5.0
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.0 upstream/5.0
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-5.1
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.1 upstream/5.1
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-5.2
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.2 upstream/5.2
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-5.3
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.3 upstream/5.3
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:oraclelinux-10-opam AS oraclelinux-5.4
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.4 upstream/5.4
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-24.04-opam AS ubuntu-3.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 3.12 upstream/3.12
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-20.04-opam AS ubuntu-4.00
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.00 upstream/4.00
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-20.04-opam AS ubuntu-4.01
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.01 upstream/4.01
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-24.04-opam AS ubuntu-4.02
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.02 upstream/4.02
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-24.04-opam AS ubuntu-4.03
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.03 upstream/4.03
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-24.04-opam AS ubuntu-4.04
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.04 upstream/4.04
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-24.04-opam AS ubuntu-4.05
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.05 upstream/4.05
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-24.04-opam AS ubuntu-4.06
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.06 upstream/4.06
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-24.04-opam AS ubuntu-4.07
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.07 upstream/4.07
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.04-opam AS ubuntu-4.08
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.08 upstream/4.08
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.04-opam AS ubuntu-4.09
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.09 upstream/4.09
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j world.opt
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.04-opam AS ubuntu-4.10
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.10 upstream/4.10
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.04-opam AS ubuntu-4.11
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.11 upstream/4.11
+RUN sed -i -e 's/ -Werror//' configure && ./configure && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.04-opam AS ubuntu-4.12
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.12 upstream/4.12
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.04-opam AS ubuntu-4.13
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.13 upstream/4.13
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.10-opam AS ubuntu-4.14
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 4.14 upstream/4.14
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.10-opam AS ubuntu-5.0
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.0 upstream/5.0
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.10-opam AS ubuntu-5.1
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.1 upstream/5.1
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.10-opam AS ubuntu-5.2
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.2 upstream/5.2
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.10-opam AS ubuntu-5.3
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.3 upstream/5.3
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.10-opam AS ubuntu-5.4
+COPY --from=cache --chown=opam:opam /home/opam/ocaml /home/opam/ocaml
+WORKDIR /home/opam/ocaml
+RUN git checkout -b 5.4 upstream/5.4
+RUN ./configure --disable-warn-error && make -j
+RUN ./ocamlopt.opt -v | head -n 1 > /home/opam/vnum
+FROM ocaml/opam:ubuntu-25.10-opam AS collect
+RUN --mount=from=alpine-3.12,src=/home/opam,dst=/mnt/opam-Alpine-3.12 \
+    --mount=from=alpine-4.00,src=/home/opam,dst=/mnt/opam-Alpine-4.00 \
+    --mount=from=alpine-4.01,src=/home/opam,dst=/mnt/opam-Alpine-4.01 \
+    --mount=from=alpine-4.02,src=/home/opam,dst=/mnt/opam-Alpine-4.02 \
+    --mount=from=alpine-4.03,src=/home/opam,dst=/mnt/opam-Alpine-4.03 \
+    --mount=from=alpine-4.04,src=/home/opam,dst=/mnt/opam-Alpine-4.04 \
+    --mount=from=alpine-4.05,src=/home/opam,dst=/mnt/opam-Alpine-4.05 \
+    --mount=from=alpine-4.06,src=/home/opam,dst=/mnt/opam-Alpine-4.06 \
+    --mount=from=alpine-4.07,src=/home/opam,dst=/mnt/opam-Alpine-4.07 \
+    --mount=from=alpine-4.08,src=/home/opam,dst=/mnt/opam-Alpine-4.08 \
+    --mount=from=alpine-4.09,src=/home/opam,dst=/mnt/opam-Alpine-4.09 \
+    --mount=from=alpine-4.10,src=/home/opam,dst=/mnt/opam-Alpine-4.10 \
+    --mount=from=alpine-4.11,src=/home/opam,dst=/mnt/opam-Alpine-4.11 \
+    --mount=from=alpine-4.12,src=/home/opam,dst=/mnt/opam-Alpine-4.12 \
+    --mount=from=alpine-4.13,src=/home/opam,dst=/mnt/opam-Alpine-4.13 \
+    --mount=from=alpine-4.14,src=/home/opam,dst=/mnt/opam-Alpine-4.14 \
+    --mount=from=alpine-5.0,src=/home/opam,dst=/mnt/opam-Alpine-5.0 \
+    --mount=from=alpine-5.1,src=/home/opam,dst=/mnt/opam-Alpine-5.1 \
+    --mount=from=alpine-5.2,src=/home/opam,dst=/mnt/opam-Alpine-5.2 \
+    --mount=from=alpine-5.3,src=/home/opam,dst=/mnt/opam-Alpine-5.3 \
+    --mount=from=alpine-5.4,src=/home/opam,dst=/mnt/opam-Alpine-5.4 \
+    --mount=from=arch-4.14,src=/home/opam,dst=/mnt/opam-Arch-4.14 \
+    --mount=from=arch-5.0,src=/home/opam,dst=/mnt/opam-Arch-5.0 \
+    --mount=from=arch-5.1,src=/home/opam,dst=/mnt/opam-Arch-5.1 \
+    --mount=from=arch-5.2,src=/home/opam,dst=/mnt/opam-Arch-5.2 \
+    --mount=from=arch-5.3,src=/home/opam,dst=/mnt/opam-Arch-5.3 \
+    --mount=from=arch-5.4,src=/home/opam,dst=/mnt/opam-Arch-5.4 \
+    --mount=from=centos-3.12,src=/home/opam,dst=/mnt/opam-CentOS-3.12 \
+    --mount=from=centos-4.00,src=/home/opam,dst=/mnt/opam-CentOS-4.00 \
+    --mount=from=centos-4.01,src=/home/opam,dst=/mnt/opam-CentOS-4.01 \
+    --mount=from=centos-4.02,src=/home/opam,dst=/mnt/opam-CentOS-4.02 \
+    --mount=from=centos-4.03,src=/home/opam,dst=/mnt/opam-CentOS-4.03 \
+    --mount=from=centos-4.04,src=/home/opam,dst=/mnt/opam-CentOS-4.04 \
+    --mount=from=centos-4.05,src=/home/opam,dst=/mnt/opam-CentOS-4.05 \
+    --mount=from=centos-4.06,src=/home/opam,dst=/mnt/opam-CentOS-4.06 \
+    --mount=from=centos-4.07,src=/home/opam,dst=/mnt/opam-CentOS-4.07 \
+    --mount=from=centos-4.08,src=/home/opam,dst=/mnt/opam-CentOS-4.08 \
+    --mount=from=centos-4.09,src=/home/opam,dst=/mnt/opam-CentOS-4.09 \
+    --mount=from=centos-4.10,src=/home/opam,dst=/mnt/opam-CentOS-4.10 \
+    --mount=from=centos-4.11,src=/home/opam,dst=/mnt/opam-CentOS-4.11 \
+    --mount=from=centos-4.12,src=/home/opam,dst=/mnt/opam-CentOS-4.12 \
+    --mount=from=centos-4.13,src=/home/opam,dst=/mnt/opam-CentOS-4.13 \
+    --mount=from=centos-4.14,src=/home/opam,dst=/mnt/opam-CentOS-4.14 \
+    --mount=from=centos-5.0,src=/home/opam,dst=/mnt/opam-CentOS-5.0 \
+    --mount=from=centos-5.1,src=/home/opam,dst=/mnt/opam-CentOS-5.1 \
+    --mount=from=centos-5.2,src=/home/opam,dst=/mnt/opam-CentOS-5.2 \
+    --mount=from=centos-5.3,src=/home/opam,dst=/mnt/opam-CentOS-5.3 \
+    --mount=from=centos-5.4,src=/home/opam,dst=/mnt/opam-CentOS-5.4 \
+    --mount=from=debian-3.12,src=/home/opam,dst=/mnt/opam-Debian-3.12 \
+    --mount=from=debian-4.00,src=/home/opam,dst=/mnt/opam-Debian-4.00 \
+    --mount=from=debian-4.01,src=/home/opam,dst=/mnt/opam-Debian-4.01 \
+    --mount=from=debian-4.02,src=/home/opam,dst=/mnt/opam-Debian-4.02 \
+    --mount=from=debian-4.03,src=/home/opam,dst=/mnt/opam-Debian-4.03 \
+    --mount=from=debian-4.04,src=/home/opam,dst=/mnt/opam-Debian-4.04 \
+    --mount=from=debian-4.05,src=/home/opam,dst=/mnt/opam-Debian-4.05 \
+    --mount=from=debian-4.06,src=/home/opam,dst=/mnt/opam-Debian-4.06 \
+    --mount=from=debian-4.07,src=/home/opam,dst=/mnt/opam-Debian-4.07 \
+    --mount=from=debian-4.08,src=/home/opam,dst=/mnt/opam-Debian-4.08 \
+    --mount=from=debian-4.09,src=/home/opam,dst=/mnt/opam-Debian-4.09 \
+    --mount=from=debian-4.10,src=/home/opam,dst=/mnt/opam-Debian-4.10 \
+    --mount=from=debian-4.11,src=/home/opam,dst=/mnt/opam-Debian-4.11 \
+    --mount=from=debian-4.12,src=/home/opam,dst=/mnt/opam-Debian-4.12 \
+    --mount=from=debian-4.13,src=/home/opam,dst=/mnt/opam-Debian-4.13 \
+    --mount=from=debian-4.14,src=/home/opam,dst=/mnt/opam-Debian-4.14 \
+    --mount=from=debian-5.0,src=/home/opam,dst=/mnt/opam-Debian-5.0 \
+    --mount=from=debian-5.1,src=/home/opam,dst=/mnt/opam-Debian-5.1 \
+    --mount=from=debian-5.2,src=/home/opam,dst=/mnt/opam-Debian-5.2 \
+    --mount=from=debian-5.3,src=/home/opam,dst=/mnt/opam-Debian-5.3 \
+    --mount=from=debian-5.4,src=/home/opam,dst=/mnt/opam-Debian-5.4 \
+    --mount=from=fedora-3.12,src=/home/opam,dst=/mnt/opam-Fedora-3.12 \
+    --mount=from=fedora-4.02,src=/home/opam,dst=/mnt/opam-Fedora-4.02 \
+    --mount=from=fedora-4.03,src=/home/opam,dst=/mnt/opam-Fedora-4.03 \
+    --mount=from=fedora-4.04,src=/home/opam,dst=/mnt/opam-Fedora-4.04 \
+    --mount=from=fedora-4.05,src=/home/opam,dst=/mnt/opam-Fedora-4.05 \
+    --mount=from=fedora-4.06,src=/home/opam,dst=/mnt/opam-Fedora-4.06 \
+    --mount=from=fedora-4.07,src=/home/opam,dst=/mnt/opam-Fedora-4.07 \
+    --mount=from=fedora-4.08,src=/home/opam,dst=/mnt/opam-Fedora-4.08 \
+    --mount=from=fedora-4.09,src=/home/opam,dst=/mnt/opam-Fedora-4.09 \
+    --mount=from=fedora-4.10,src=/home/opam,dst=/mnt/opam-Fedora-4.10 \
+    --mount=from=fedora-4.11,src=/home/opam,dst=/mnt/opam-Fedora-4.11 \
+    --mount=from=fedora-4.12,src=/home/opam,dst=/mnt/opam-Fedora-4.12 \
+    --mount=from=fedora-4.13,src=/home/opam,dst=/mnt/opam-Fedora-4.13 \
+    --mount=from=fedora-4.14,src=/home/opam,dst=/mnt/opam-Fedora-4.14 \
+    --mount=from=fedora-5.0,src=/home/opam,dst=/mnt/opam-Fedora-5.0 \
+    --mount=from=fedora-5.1,src=/home/opam,dst=/mnt/opam-Fedora-5.1 \
+    --mount=from=fedora-5.2,src=/home/opam,dst=/mnt/opam-Fedora-5.2 \
+    --mount=from=fedora-5.3,src=/home/opam,dst=/mnt/opam-Fedora-5.3 \
+    --mount=from=fedora-5.4,src=/home/opam,dst=/mnt/opam-Fedora-5.4 \
+    --mount=from=opensuse-3.12,src=/home/opam,dst=/mnt/opam-openSUSE-3.12 \
+    --mount=from=opensuse-4.00,src=/home/opam,dst=/mnt/opam-openSUSE-4.00 \
+    --mount=from=opensuse-4.01,src=/home/opam,dst=/mnt/opam-openSUSE-4.01 \
+    --mount=from=opensuse-4.02,src=/home/opam,dst=/mnt/opam-openSUSE-4.02 \
+    --mount=from=opensuse-4.03,src=/home/opam,dst=/mnt/opam-openSUSE-4.03 \
+    --mount=from=opensuse-4.04,src=/home/opam,dst=/mnt/opam-openSUSE-4.04 \
+    --mount=from=opensuse-4.05,src=/home/opam,dst=/mnt/opam-openSUSE-4.05 \
+    --mount=from=opensuse-4.06,src=/home/opam,dst=/mnt/opam-openSUSE-4.06 \
+    --mount=from=opensuse-4.07,src=/home/opam,dst=/mnt/opam-openSUSE-4.07 \
+    --mount=from=opensuse-4.08,src=/home/opam,dst=/mnt/opam-openSUSE-4.08 \
+    --mount=from=opensuse-4.09,src=/home/opam,dst=/mnt/opam-openSUSE-4.09 \
+    --mount=from=opensuse-4.10,src=/home/opam,dst=/mnt/opam-openSUSE-4.10 \
+    --mount=from=opensuse-4.11,src=/home/opam,dst=/mnt/opam-openSUSE-4.11 \
+    --mount=from=opensuse-4.12,src=/home/opam,dst=/mnt/opam-openSUSE-4.12 \
+    --mount=from=opensuse-4.13,src=/home/opam,dst=/mnt/opam-openSUSE-4.13 \
+    --mount=from=opensuse-4.14,src=/home/opam,dst=/mnt/opam-openSUSE-4.14 \
+    --mount=from=opensuse-5.0,src=/home/opam,dst=/mnt/opam-openSUSE-5.0 \
+    --mount=from=opensuse-5.1,src=/home/opam,dst=/mnt/opam-openSUSE-5.1 \
+    --mount=from=opensuse-5.2,src=/home/opam,dst=/mnt/opam-openSUSE-5.2 \
+    --mount=from=opensuse-5.3,src=/home/opam,dst=/mnt/opam-openSUSE-5.3 \
+    --mount=from=opensuse-5.4,src=/home/opam,dst=/mnt/opam-openSUSE-5.4 \
+    --mount=from=oraclelinux-3.12,src=/home/opam,dst=/mnt/opam-OracleLinux-3.12 \
+    --mount=from=oraclelinux-4.00,src=/home/opam,dst=/mnt/opam-OracleLinux-4.00 \
+    --mount=from=oraclelinux-4.01,src=/home/opam,dst=/mnt/opam-OracleLinux-4.01 \
+    --mount=from=oraclelinux-4.02,src=/home/opam,dst=/mnt/opam-OracleLinux-4.02 \
+    --mount=from=oraclelinux-4.03,src=/home/opam,dst=/mnt/opam-OracleLinux-4.03 \
+    --mount=from=oraclelinux-4.04,src=/home/opam,dst=/mnt/opam-OracleLinux-4.04 \
+    --mount=from=oraclelinux-4.05,src=/home/opam,dst=/mnt/opam-OracleLinux-4.05 \
+    --mount=from=oraclelinux-4.06,src=/home/opam,dst=/mnt/opam-OracleLinux-4.06 \
+    --mount=from=oraclelinux-4.07,src=/home/opam,dst=/mnt/opam-OracleLinux-4.07 \
+    --mount=from=oraclelinux-4.08,src=/home/opam,dst=/mnt/opam-OracleLinux-4.08 \
+    --mount=from=oraclelinux-4.09,src=/home/opam,dst=/mnt/opam-OracleLinux-4.09 \
+    --mount=from=oraclelinux-4.10,src=/home/opam,dst=/mnt/opam-OracleLinux-4.10 \
+    --mount=from=oraclelinux-4.11,src=/home/opam,dst=/mnt/opam-OracleLinux-4.11 \
+    --mount=from=oraclelinux-4.12,src=/home/opam,dst=/mnt/opam-OracleLinux-4.12 \
+    --mount=from=oraclelinux-4.13,src=/home/opam,dst=/mnt/opam-OracleLinux-4.13 \
+    --mount=from=oraclelinux-4.14,src=/home/opam,dst=/mnt/opam-OracleLinux-4.14 \
+    --mount=from=oraclelinux-5.0,src=/home/opam,dst=/mnt/opam-OracleLinux-5.0 \
+    --mount=from=oraclelinux-5.1,src=/home/opam,dst=/mnt/opam-OracleLinux-5.1 \
+    --mount=from=oraclelinux-5.2,src=/home/opam,dst=/mnt/opam-OracleLinux-5.2 \
+    --mount=from=oraclelinux-5.3,src=/home/opam,dst=/mnt/opam-OracleLinux-5.3 \
+    --mount=from=oraclelinux-5.4,src=/home/opam,dst=/mnt/opam-OracleLinux-5.4 \
+    --mount=from=ubuntu-3.12,src=/home/opam,dst=/mnt/opam-Ubuntu-3.12 \
+    --mount=from=ubuntu-4.00,src=/home/opam,dst=/mnt/opam-Ubuntu-4.00 \
+    --mount=from=ubuntu-4.01,src=/home/opam,dst=/mnt/opam-Ubuntu-4.01 \
+    --mount=from=ubuntu-4.02,src=/home/opam,dst=/mnt/opam-Ubuntu-4.02 \
+    --mount=from=ubuntu-4.03,src=/home/opam,dst=/mnt/opam-Ubuntu-4.03 \
+    --mount=from=ubuntu-4.04,src=/home/opam,dst=/mnt/opam-Ubuntu-4.04 \
+    --mount=from=ubuntu-4.05,src=/home/opam,dst=/mnt/opam-Ubuntu-4.05 \
+    --mount=from=ubuntu-4.06,src=/home/opam,dst=/mnt/opam-Ubuntu-4.06 \
+    --mount=from=ubuntu-4.07,src=/home/opam,dst=/mnt/opam-Ubuntu-4.07 \
+    --mount=from=ubuntu-4.08,src=/home/opam,dst=/mnt/opam-Ubuntu-4.08 \
+    --mount=from=ubuntu-4.09,src=/home/opam,dst=/mnt/opam-Ubuntu-4.09 \
+    --mount=from=ubuntu-4.10,src=/home/opam,dst=/mnt/opam-Ubuntu-4.10 \
+    --mount=from=ubuntu-4.11,src=/home/opam,dst=/mnt/opam-Ubuntu-4.11 \
+    --mount=from=ubuntu-4.12,src=/home/opam,dst=/mnt/opam-Ubuntu-4.12 \
+    --mount=from=ubuntu-4.13,src=/home/opam,dst=/mnt/opam-Ubuntu-4.13 \
+    --mount=from=ubuntu-4.14,src=/home/opam,dst=/mnt/opam-Ubuntu-4.14 \
+    --mount=from=ubuntu-5.0,src=/home/opam,dst=/mnt/opam-Ubuntu-5.0 \
+    --mount=from=ubuntu-5.1,src=/home/opam,dst=/mnt/opam-Ubuntu-5.1 \
+    --mount=from=ubuntu-5.2,src=/home/opam,dst=/mnt/opam-Ubuntu-5.2 \
+    --mount=from=ubuntu-5.3,src=/home/opam,dst=/mnt/opam-Ubuntu-5.3 \
+    --mount=from=ubuntu-5.4,src=/home/opam,dst=/mnt/opam-Ubuntu-5.4 \
+    cat /mnt/opam-*/vnum > /home/opam/results
+FROM ubuntu-5.4 AS finished
+RUN echo true
