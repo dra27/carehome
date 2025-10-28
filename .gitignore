@@ -1,1 +1,6 @@
+/_build/
+/ocaml/
+/opam-repository/
+/opam-repository-archive/
+
 *.swp
