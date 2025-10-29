@@ -13,6 +13,15 @@ end = struct
 
   let trunks =
     let trunkify map v =
+      let v =
+        if Ocaml_version.major v = 3 && Ocaml_version.minor v = 7 then
+          let patch =
+            Option.fold ~none:0 ~some:int_of_string (Ocaml_version.extra v)
+          in
+          Ocaml_version.v ~patch 3 7
+        else
+          v
+      in
       let patch = Option.map succ (Ocaml_version.patch v) in
       let v = Ocaml_version.with_just_major_and_minor v in
       Map.add v (Ocaml_version.with_patch v patch) map
@@ -26,10 +35,19 @@ end
 (* Version comparison functions *)
 
 (* Single release - compares major, minor and patch *)
-let release v _ version =
-   Ocaml_version.major v = Ocaml_version.major version
-   && Ocaml_version.minor v = Ocaml_version.minor version
-   && Ocaml_version.patch v = Ocaml_version.patch version
+let release ?not:exclude v _ version =
+  let handle_3_07 v =
+    match Ocaml_version.patch v with
+    | None -> Option.map int_of_string (Ocaml_version.extra v)
+    | (Some _) as v -> v
+  in
+  not (Option.fold ~none:false ~some:(Ocaml_version.equal version) exclude)
+  && Ocaml_version.major v = Ocaml_version.major version
+  && Ocaml_version.minor v = Ocaml_version.minor version
+  && handle_3_07 v = handle_3_07 version
+
+let exactly v _ version =
+  Ocaml_version.compare v version = 0
 
 (* Release series - compare major minor and must be a released version *)
 let series v _ version =
@@ -37,19 +55,31 @@ let series v _ version =
   && Ocaml_version.minor v = Ocaml_version.minor version
   && Ocaml_version.compare version (Releases.maintenance v) < 0
 
+let gpr1330 v name version =
+  let skip extra =
+    List.mem extra ["statistical-memprof";
+                    "bytecode-only";
+                    "32bit";
+                    "fp";
+                    "fp+flambda"]
+  in
+  series v name version
+  && not (Option.fold ~none:false ~some:skip (Ocaml_version.extra version))
+
 let ocaml_variants = OpamPackage.Name.of_string "ocaml-variants"
 
-let gcc10_4_08_releases v name version =
+let gcc10_releases v name version =
    release v name version
    && Ocaml_version.extra version <> Some "force-safe-string"
+   && Ocaml_version.extra version <> Some "termux"
 
 (* Complicated mix of mis-applied patches for 4.08 maintenance branch *)
-let gcc10_4_08_2 name version =
+let gcc10_trunk v name version =
   let some s =
     s = "force-safe-string" || String.ends_with ~suffix:"+force-safe-string" s
   in
   name = ocaml_variants
-  && release Releases.(maintenance v4_08) name version
+  && release Releases.(maintenance v) name version
   && not (Option.fold ~none:false ~some (Ocaml_version.extra version))
 
 (* Non-variant versions of 4.09.0 *)
@@ -83,31 +113,187 @@ let commit_from ?(multicore=true) subject branch =
   in
   filter, `Commit (branch_name, subject)
 
+let clang_diff name version =
+  let skip_4_01 extra =
+    List.mem extra ["lsb"; "musl"; "musl+static"; "armv6-freebsd"]
+  in
+  let skip_4_00 extra =
+    List.mem extra ["mirage-xen";
+                    "mirage-unix";
+                    "short-types";
+                    "open-types";
+                    "raspberrypi"]
+  in
+  let v4_00_1_debug_runtime =
+    Ocaml_version.of_string_exn "4.00.1+debug-runtime"
+  in
+  let extra = Ocaml_version.extra version in
+  series Releases.v4_01 name version
+    && not (Option.fold ~none:false ~some:skip_4_01 extra)
+  || (exactly v4_00_1_debug_runtime name version
+      || exactly Releases.v4_00_1 name version)
+      && not (Option.fold ~none:false ~some:skip_4_00 extra)
+
+let v4_00_0_debug_runtime =
+  Ocaml_version.of_string_exn "4.00.0+debug-runtime"
+let v4_02_0_improved_errors =
+  Ocaml_version.with_variant Releases.v4_02_0 (Some "improved-errors")
+let v4_02_2_improved_errors =
+  Ocaml_version.with_variant Releases.v4_02_2 (Some "improved-errors")
+let v4_04_1_copatterns =
+  Ocaml_version.with_variant Releases.v4_04_1 (Some "copatterns")
+
+let series_3_09_except_metaocaml name version =
+  series Releases.v3_09 name version
+  && Ocaml_version.extra version <> Some "metaocaml"
+
+let v3_09_1_except_metaocaml name version =
+  release Releases.v3_09_1 name version
+  && Ocaml_version.extra version <> Some "metaocaml"
+
 (* Patches *)
 let patches =
   [
-    "fix-gcc10", [
-      gcc10_4_08_releases Releases.v4_08_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.08.0";
-      gcc10_4_08_releases Releases.v4_08_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.08.1";
-      gcc10_4_08_2,`Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/fix-gcc10.patch.4.08.2";
+    "ocaml-3.07-patch1.diffs", None, [
+      release Releases.v3_07_1, `Patch "https://caml.inria.fr/pub/distrib/ocaml-3.07/ocaml-3.07-patch1.diffs";
+    ];
+    "ocaml-3.07-patch2.diffs", None, [
+      release Releases.v3_07_2, `Patch "https://caml.inria.fr/pub/distrib/ocaml-3.07/ocaml-3.07-patch2.diffs";
+    ];
+    "pr4439.patch", None, [
+      series_3_09_except_metaocaml, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/pr4439.patch";
+    ];
+    "ocamlopt-fPIC.patch", None, [
+      series_3_09_except_metaocaml, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/ocamlopt-fPIC.patch";
+    ];
+    "pr4867.patch", None, [
+      release Releases.v3_09_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/pr4867.patch.3.09.0";
+      v3_09_1_except_metaocaml, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/pr4867.patch.3.09.1";
+      release Releases.v3_09_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/pr4867.patch.3.09.2";
+      release Releases.v3_09_3, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/pr4867.patch.3.09.3";
+      release Releases.v3_10_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/pr4867.patch.3.10.0";
+      release Releases.v3_10_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/pr4867.patch.3.10.1";
+      release Releases.v3_10_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/pr4867.patch.3.10.2";
+    ];
+    "PIC.patch", None, [
+      release Releases.v3_07_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/PIC.patch.3.07";
+      release Releases.v3_07_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/PIC.patch.3.07+1";
+      release Releases.v3_07_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/PIC.patch.3.07+2";
+      release Releases.v3_08_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/PIC.patch.3.08.0";
+      release Releases.v3_08_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/PIC.patch.3.08.1";
+      release Releases.v3_08_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/PIC.patch.3.08.2";
+      release Releases.v3_08_3, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/PIC.patch.3.08.3";
+      release Releases.v3_08_4, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/PIC.patch.3.08.4";
+      release Releases.v3_09_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/PIC.patch.3.09.0";
+    ];
+    "pr2061.patch", None, [
+      series Releases.v3_07, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/pr2061.patch";
+    ];
+    "pr5237.patch", None, [
+      series Releases.v3_11, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/pr5237.patch";
+    ];
+    (* XXX This is actually the same as the pr5237 backport to earlier
+           versions *)
+    "fix-binutils.patch", Some "os != \"win32\"", [
+      release Releases.v3_12_0, `Patch "https://gist.githubusercontent.com/vicuna/864c7c8a5c03917ca1482d8fbba12d36/raw/fa7664cecc98d7d5d97ee6d8fb035c2e229bff57/0007-Fix-ocamlopt-w.r.t.-binutils-2.21.patch";
+    ];
+    "dc0776f55108a20dad5a9c06188545dc08dbf462.patch", None, [
+      exactly (Ocaml_version.with_variant Releases.v4_00_1 (Some "raspberrypi")), `Patch "https://github.com/avsm/ocaml/commit/dc0776f55108a20dad5a9c06188545dc08dbf462.patch?full_index=1";
+    ];
+    "freebsd10-armv6-natdynlink.patch", None, [
+      exactly (Ocaml_version.with_variant Releases.v4_01_0 (Some "armv6-freebsd")), `Patch "https://github.com/andrewray/mirage-fpga/releases/download/v0.1/freebsd10-armv6-natdynlink.patch";
+    ];
+    "bd7fa181cb64742c3b6cbb8ee13436554eb18cd7...fix-clang-build.diff", None, [
+      clang_diff, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/fix-clang-build-ocaml-401.patch";
+    ];
+    "ocaml-4.06.1+termux.patch", None, [
+      exactly (Ocaml_version.with_variant Releases.v4_06_1 (Some "termux")), `Patch "https://ygrek.org/files/ocaml-4.06.1+termux.patch";
+    ];
+    "fix-gcc10.patch", None, [
+      release ~not:v4_00_0_debug_runtime Releases.v4_00_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.00.0";
+      exactly Releases.v4_00_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.00.1";
+      exactly Releases.v4_01_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.01.0";
+      exactly v4_02_0_improved_errors, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/fix-gcc10.patch.4.02.0+improved-errors";
+      release ~not:v4_02_0_improved_errors Releases.v4_02_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.02.0";
+      release Releases.v4_02_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.02.1";
+      exactly v4_02_2_improved_errors, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/fix-gcc10.patch.4.02.2+improved-errors";
+      release ~not:v4_02_2_improved_errors Releases.v4_02_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.02.2";
+      release Releases.v4_02_3, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.02.3";
+      release Releases.(maintenance v4_02), `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/fix-gcc10.patch.4.02.4+trunk";
+      release Releases.v4_03_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.03.0";
+      release Releases.(maintenance v4_03), `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/fix-gcc10.patch.4.03.1+trunk";
+      release Releases.v4_04_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.04.0";
+      exactly v4_04_1_copatterns, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/fix-gcc10.patch.4.04.1+copatterns";
+      release ~not:v4_04_1_copatterns Releases.v4_04_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.04.1";
+      release Releases.v4_04_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.04.2";
+      release Releases.(maintenance v4_04), `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/fix-gcc10.patch.4.04.3+trunk";
+      release Releases.v4_05_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.05.0";
+      release Releases.(maintenance v4_05), `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/fix-gcc10.patch.4.05.1";
+      gcc10_releases Releases.v4_06_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.06.0";
+      gcc10_releases Releases.v4_06_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.06.1";
+      gcc10_trunk Releases.v4_06, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/fix-gcc10.patch.4.06.2";
+      gcc10_releases Releases.v4_07_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.07.0";
+      release Releases.v4_07_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.07.1";
+      release Releases.(maintenance v4_07), `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/fix-gcc10.patch.4.07.2";
+      gcc10_releases Releases.v4_08_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.08.0";
+      gcc10_releases Releases.v4_08_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.08.1";
+      gcc10_trunk Releases.v4_08,`Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/fix-gcc10.patch.4.08.2";
       released_4_09_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/fix-gcc10.patch.4.09.0";
     ];
-    "add-conditional-compilation", [
+    "improved-error.patch", None, [
+      exactly v4_02_0_improved_errors, `Patch "https://gist.githubusercontent.com/andrewray/1928825fea090e50c0de/raw/e121b5cd176cdf6b882bc402276235b1c0a71b69/improved-error.patch";
+    ];
+    "add-conditional-compilation.patch", None, [
       rescript Releases.v4_06_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/add-conditional-compilation.patch.4.06.1+rescript";
       rescript Releases.v4_10_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-variants/add-conditional-compilation.patch.4.10.2+rescript";
     ];
-    "alt-signal-stack",
+    "gpr1330.patch", None, [
+      gpr1330 Releases.v4_02, `Commit ("4.02", "AArch64 GOT fixed");
+      gpr1330 Releases.v4_03, `Commit ("4.03", "AArch64 GOT fixed");
+      gpr1330 Releases.v4_04, `Commit ("4.04", "AArch64 GOT fixed");
+      gpr1330 Releases.v4_05, `Commit ("4.05", "AArch64 GOT fixed");
+    ];
+    "alt-signal-stack.patch", None, [
+      release Releases.v3_07_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.07";
+      release Releases.v3_07_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.07+1";
+      release Releases.v3_07_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.07+2";
+      release Releases.v3_08_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.08.0";
+      release Releases.v3_08_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.08.1";
+      release Releases.v3_08_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.08.2";
+      release Releases.v3_08_3, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.08.3";
+      release Releases.v3_08_4, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.08.4";
+      release Releases.v3_09_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.09.0";
+      release Releases.v3_09_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.09.1";
+      release Releases.v3_09_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.09.2";
+      release Releases.v3_09_3, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.09.3";
+      release Releases.v3_10_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.10.0";
+      release Releases.v3_10_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.10.1";
+      release Releases.v3_10_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.10.2";
+      release Releases.v3_11_0, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.11.0";
+      release Releases.v3_11_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.11.1";
+      release Releases.v3_11_2, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/alt-signal-stack.patch.3.11.2";
+    ];
+    "alt-signal-stack.patch", None,
       List.map (commit_from ~multicore:false "Dynamically allocate the alternate signal stack") [
+        Releases.v3_12;
+        Releases.v4_00;
+        Releases.v4_01;
+        Releases.v4_02;
+        Releases.v4_03;
+        Releases.v4_04;
+        Releases.v4_05;
+        Releases.v4_06;
+        Releases.v4_07;
         Releases.v4_08;
         Releases.v4_09;
         Releases.v4_10;
         Releases.v4_11;
         Releases.v4_12;
       ];
-    "0001-Re-generate-configure", [
+    "0001-Re-generate-configure.patch", None, [
       release Releases.v4_09_1, `Patch "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/ocaml-base-compiler/0001-Re-generate-configure.patch";
     ];
-    "zstd-detection", [
+    "zstd-detection.patch", None, [
       variants_5_1_0, `Commit ("5.1", "Merge pull request #13100 from dra27/zstd-runs");
     ];
   ]
@@ -202,20 +388,31 @@ let find_commits store branch subjects =
 open Lwt.Syntax
 
 let get_checksums =
-  let get_checksums url () =
+  let rec get_checksums orig_url max_redirects url () =
     Cohttp_lwt_unix.Client.get (Uri.of_string url) >>= fun (response, body) ->
-      let code = Cohttp.Code.code_of_status (Cohttp.Response.status response) in
-      if code <> 200 then
-        Lwt.fail (Error (`Download_error (url, code)))
-      else
-        Cohttp_lwt.Body.to_string body >|= fun body ->
-          let md5 =
-            Digestif.MD5.to_hex (Digestif.MD5.digest_string body)
-          in
-          let sha256 =
-            Digestif.SHA256.to_hex (Digestif.SHA256.digest_string body)
-          in
-          ~md5, ~sha256
+      let status = Cohttp.Response.status response in
+      let code = Cohttp.Code.code_of_status status in
+      let headers = Http.Response.headers response in
+      let location = Http.Header.get headers "location" in
+      match status with
+      | `OK ->
+          Cohttp_lwt.Body.to_string body >|= fun body ->
+            let md5 =
+              Digestif.MD5.to_hex (Digestif.MD5.digest_string body)
+            in
+            let sha256 =
+              Digestif.SHA256.to_hex (Digestif.SHA256.digest_string body)
+            in
+            ~md5, ~sha256
+      | `Permanent_redirect
+      | `Moved_permanently
+      | `Found
+      | `Temporary_redirect when max_redirects > 0 && location <> None ->
+          let* () = Cohttp_lwt.Body.drain_body body in
+          get_checksums orig_url (pred max_redirects) (Option.get location) ()
+      | _ ->
+          let* () = Cohttp_lwt.Body.drain_body body in
+          Lwt.fail (Error (`Download_error (orig_url, code)))
   in
   let download_pool = Lwt_pool.create 10 (fun () -> Lwt.return_unit) in
   let (known : (string, (md5:string * sha256:string) Lwt.t) Hashtbl.t) =
@@ -225,7 +422,7 @@ let get_checksums =
     let+ (~md5:md5_hash, ~sha256:sha256_hash) =
       try Hashtbl.find known url
       with Not_found ->
-        let r = Lwt_pool.use download_pool (get_checksums url) in
+        let r = Lwt_pool.use download_pool (get_checksums url 10 url) in
         Hashtbl.add known url r; r
     in
     let md5 = if md5 then Some md5_hash else None in
@@ -234,7 +431,7 @@ let get_checksums =
 
 (* Processing *)
 let patches =
-  let get_commits commits (_, versions) =
+  let get_commits commits (_, _, versions) =
     let f commits (_, source) =
       match source with
       | `Commit (branch, subject) ->
@@ -254,11 +451,16 @@ let patches =
       StringMap.mapi (find_commits store) commits
   in
   let patches =
-    let combine patch (filter, source) =
-      let patch = patch ^ ".patch" in
+    let combine patch patch_filter (filter, source) =
+      let filter_of_string s =
+        let value = OpamParser.FullPos.value_from_string s "<filter>" in
+        OpamPp.parse OpamFormat.V.filter ~pos:value.pos [value]
+      in
+      let patch_filter = Option.map filter_of_string patch_filter in
       match source with
       | `Patch url ->
-          filter, patch, Lwt.return url, get_checksums ~md5:true url
+          let checksums = get_checksums ~md5:true url in
+          filter, patch, patch_filter, Lwt.return url, checksums
       | `Commit (branch, subject) ->
           let url =
             let* commits in
@@ -271,10 +473,11 @@ let patches =
             let* url in
             get_checksums url
           in
-          filter, patch, url, checksums
+          filter, patch, patch_filter, url, checksums
     in
     patches
-    |> List.map (fun (patch, versions) -> List.map (combine patch) versions)
+    |> List.map (fun (patch, filter, versions) ->
+                   List.map (combine patch filter) versions)
     |> List.flatten
   in
   fun nv ->
@@ -284,9 +487,9 @@ let patches =
       |> OpamPackage.Version.to_string
       |> Ocaml_version.of_string_exn
     in
-    let f (filter, patch, url, checksums) =
+    let f (filter, patch, patch_filter, url, checksums) =
       if filter name version then
-        Some (patch, url, checksums)
+        Some (patch, patch_filter, url, checksums)
       else
         None
     in
@@ -297,13 +500,17 @@ let packages = StringSet.of_list [
 ]
 
 let third_party = OpamPackage.Set.of_list (List.map OpamPackage.of_string [
-  "ocaml-variants.5.1.1+flambda2"; "ocaml-variants.5.1.1+flambda2+trunk"
+  (* OxCaml *)
+  "ocaml-variants.5.1.1+flambda2";
+  "ocaml-variants.5.1.1+flambda2+trunk";
+  (* Lost patches *)
+  "ocaml-variants.4.00.1+french";
+  "ocaml-variants.4.00.1+annot";
+  "ocaml-variants.4.00.0+fp";
 ])
 
 let check_opam_file name opam =
   let nv = OpamPackage.of_string name in
-  let expected_patches = patches nv in
-  let patches = OpamFile.OPAM.patches opam in
   let is_prerelease =
     let v =
       OpamPackage.version nv
@@ -320,16 +527,52 @@ let check_opam_file name opam =
     || String.starts_with ~prefix:"beta" extra
     || String.starts_with ~prefix:"rc" extra
   in
-  let is_in_range =
-    OpamPackage.Version.compare
-      (OpamPackage.version nv) (OpamPackage.Version.of_string "4.08") >= 0
+  let empty = StringSet.of_list [
+    (* Unclear why this is skipped *)
+    "ocaml-variants.4.04.0+trunk+forced_lto";
+    (* Disabled in opam-repository-archive *)
+    "ocaml-variants.4.04.0+copatterns";
+  ] in
+  let expected_patches =
+    if is_prerelease || StringSet.mem name empty then
+      []
+    else
+      patches nv
   in
-  if not (OpamPackage.Set.mem nv third_party) && not is_prerelease
-     && is_in_range then begin
-    let f (name, url, checksums) =
+  (* Apply various fudges *)
+  (* XXX With the hope that they can be removed... *)
+  let expected_patches =
+    match name with
+    | "ocaml-variants.4.02.2+improved-errors"
+    | "ocaml-variants.4.02.3+buckle-master" ->
+        (* XXX gpr1330 patch is last *)
+        let a, b =
+          let f (name, _, _, _) = name <> "gpr1330.patch" in
+          List.partition f expected_patches
+        in
+        a @ b
+    | "ocaml-variants.4.02.3+PIC" ->
+        (* XXX Uses the 4.03 version of gpr1330! *)
+        let gpr1330 =
+          let patches =
+            patches (OpamPackage.of_string "ocaml-base-compiler.4.03.0")
+          in
+          List.find (fun (name, _, _, _) -> name = "gpr1330.patch") patches
+        in
+        List.map (fun ((name, _, _, _) as patch) ->
+                    if name = "gpr1330.patch" then
+                      gpr1330
+                    else
+                      patch) expected_patches
+    | _ ->
+        expected_patches
+  in
+  let patches = OpamFile.OPAM.patches opam in
+  if not (OpamPackage.Set.mem nv third_party) && not is_prerelease then begin
+    let f (name, filter, url, checksums) =
       let+ url
       and+ ~md5, ~sha256 = checksums in
-      name, None, None, Some url, md5, sha256, None
+      name, filter, None, Some url, md5, sha256, None
     in
     let+ expected_patches = Lwt_list.map_p f expected_patches in
     let extra_files =
