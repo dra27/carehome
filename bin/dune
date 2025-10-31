@@ -1,4 +1,4 @@
 (executable
  (name check)
  (public_name check)
- (libraries git-unix opam-format lwt ocaml-version cohttp-lwt-unix))
+ (libraries git-unix opam-format lwt ocaml-version dockerfile-opam cohttp-lwt-unix))

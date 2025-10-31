@@ -21,6 +21,8 @@ depends: [
   "fmt"
   "cohttp-lwt-unix"
   "tls-lwt"
+  "dockerfile-opam"
+  "ocaml-version"
 ]
 build: [
   ["dune" "subst"] {pinned}

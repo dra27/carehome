@@ -13,4 +13,4 @@
  (license "ISC")
  (bug_reports "https://github.com/dra27/carehome/issues")
  (description "Analyze and report on patches applied to OCaml compiler packages in ocaml/opam-repository")
- (depends ocaml (dune (>= 2.0)) git-unix opam-format lwt logs fmt cohttp-lwt-unix tls-lwt))
+ (depends ocaml (dune (>= 2.0)) git-unix opam-format lwt logs fmt cohttp-lwt-unix tls-lwt dockerfile-opam ocaml-version))

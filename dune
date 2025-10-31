@@ -1,1 +1,2 @@
 (dirs :standard \ ocaml opam-repository opam-repository-archive)
+(vendored_dirs ocaml-dockerfile)
