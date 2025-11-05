@@ -715,68 +715,7 @@ let distros =
   |> List.sort Dockerfile_opam.Distro.compare
   |> List.map Dockerfile_opam.Distro.resolve_alias
 
-let create_cache_stage repo_sha archive_sha packages excludes =
-  (* XXX Use Dockerfile commands (maybe?) *)
-  (* XXX The cache builder could be shared with the general "make builders" infra *)
-  Printf.eprintf {|
-FROM ocaml/opam:ubuntu-24.04-opam AS environment
-ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
-RUN <<End-of-Script
-  git -C opam-repository fetch origin
-  git -C opam-repository checkout %s
-  git clone https://github.com/ocaml/opam-repository-archive.git
-  git -C opam-repository-archive checkout %s
-  sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam
-  opam update
-  opam repo add --set-default --rank=2 archive opam-repository-archive
-  mkdir t
-  cd t
-  for v in $(seq 0 3); do
-    opam source ocaml-config.$v
-  done
-End-of-Script
-FROM environment
-RUN <<End-of-Script
-|} repo_sha archive_sha;
-  let _ =
-    let source seen (name, opam) =
-      if StringSet.mem name excludes then
-        seen
-      else
-        let urls =
-          List.filter_map (fun (_, url) -> if OpamFile.URL.checksum url = [] then None else Some (OpamUrl.to_string (OpamFile.URL.url url))) (OpamFile.OPAM.extra_sources opam)
-        in
-        let urls =
-          Option.map (fun url -> if OpamFile.URL.checksum url = [] then urls else (OpamUrl.to_string (OpamFile.URL.url url))::urls) (OpamFile.OPAM.url opam)
-          |> Option.value ~default:urls
-          |> StringSet.of_list
-        in
-        if not (StringSet.is_empty (StringSet.diff urls seen)) then
-          let () = Printf.eprintf "  opam source %s\n" name in
-          StringSet.union urls seen
-        else
-          seen
-    in
-    List.fold_left source StringSet.empty (List.sort Stdlib.compare packages)
-  in
-  Printf.eprintf {|  cd ..
-  rm -rf t
-End-of-Script
-RUN --mount=type=cache,id=carehome-download-cache,uid=1000,gid=1000,target=/home/opam/shared-cache <<End-of-Script
-  rm -rf /home/opam/shared-cache/*
-  cp -a /home/opam/.opam/download-cache/* /home/opam/shared-cache/
-  echo Poison
-End-of-Script
-|}
-
-(*
-let opam_version_in_distro = function
-| `Debian `V10 -> "2.2"
-| `Ubuntu `V20_04 -> "2.3"
-| _ -> "2.4"
-*)
-
-let base_image repo_sha archive_sha arch (distro : Dockerfile_opam.Distro.distro) =
+let base_image ic repo_sha archive_sha arch (distro : Dockerfile_opam.Distro.distro) =
   let shims =
     if distro = `Debian `V10 then
       {|
@@ -809,6 +748,18 @@ let base_image repo_sha archive_sha arch (distro : Dockerfile_opam.Distro.distro
     | `X86_64 -> "", ""
     | `I386 -> "--platform=linux/i386 ", "32bit-"
   in
+  let extra_tweaks =
+    match distro with
+    | `CentOS (`V10)
+    | `Fedora (`V41 | `V43)
+    | `OracleLinux (`V10) ->
+        {|
+USER root
+RUN sed -i -e '/auth/s/include.*/sufficient pam_permit.so/' /etc/pam.d/sudo
+USER opam|}
+    | _ ->
+        ""
+  in
   let extra_packages =
     match distro with
     | `Alpine _ ->
@@ -830,8 +781,8 @@ let base_image repo_sha archive_sha arch (distro : Dockerfile_opam.Distro.distro
       ""
   in
   let distro = Dockerfile_opam.Distro.tag_of_distro (distro :> Dockerfile_opam.Distro.t) in
-  Printf.printf {|
-FROM %socaml/opam:%s-opam AS %s-%s6693-opam
+  Printf.fprintf ic {|
+FROM %socaml/opam:%s-opam AS %s-%s6693-opam%s
 RUN <<End-of-Script%s
   git clone https://github.com/dra27/opam.git
   cd opam
@@ -849,123 +800,244 @@ RUN <<End-of-Script%s
   opam update%s
   opam update --depexts
   opam repo add --set-default --rank=2 archive opam-repository-archive%s
+  rm -rf /home/opam/.opam/download-cache
+  touch results
 End-of-Script
-|} platform distro distro key extra_packages platform distro distro key distro key remote repo_sha archive_sha shims patch
+COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
+|} platform distro distro key extra_tweaks extra_packages platform distro distro key distro key remote repo_sha archive_sha shims patch
 
-let build_package repo_sha archive_sha bases (stage_name, arch, (distro : Dockerfile_opam.Distro.distro), repo, packages) =
-  let key = Ocaml_version.string_of_arch (arch : [`X86_64 | `I386] :> Ocaml_version.arch) ^ "-" ^ Dockerfile_opam.Distro.human_readable_string_of_distro (distro :> Dockerfile_opam.Distro.t) in
-  let bases =
-    if StringSet.mem key bases then
-      bases
-    else
-      let () = base_image repo_sha archive_sha arch distro in
-      StringSet.add key bases
-  in
-  let platform =
-    let distro = Dockerfile_opam.Distro.tag_of_distro (distro :> Dockerfile_opam.Distro.t) in
-    if arch = `I386 then
-      "--platform=linux/i386 " ^ distro ^ "-32bit"
-    else
-      distro
-  in
-  let repo =
-    Option.fold ~none:"" ~some:(fun r -> "--repos=" ^ r ^ " ") repo
-  in
-  let packages =
-    match packages with
-    | [name] -> name
-    | packages -> "--packages=" ^ String.concat "," packages
-  in
-  Printf.printf {|
-FROM %s-base AS test-%s
-RUN --mount=type=cache,id=carehome-download-cache,uid=1000,gid=1000,target=/home/opam/shared-cache <<End-of-Script
-  rm -rf /home/opam/.opam/download-cache/*
-  mkdir -p /home/opam/.opam/download-cache
-  cp -a /home/opam/shared-cache/* /home/opam/.opam/download-cache/
+(* XXX Should be memoized - this gets calculated for each dockerfile for no reason *)
+let create_cache_stage oc repo_sha archive_sha packages excludes builds =
+  (* XXX Use Dockerfile commands (maybe?) *)
+  (* XXX The cache builder could be shared with the general "make builders" infra *)
+(*
+  Printf.printf "Creating Dockerfile.prime\n%!";
+  Out_channel.with_open_text "Dockerfile.prime" @@ fun oc ->
+*)
+    Printf.fprintf oc {|FROM ocaml/opam:ubuntu-24.04-opam AS environment
+ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
+RUN <<End-of-Script
+  git -C opam-repository fetch origin
+  git -C opam-repository checkout %s
+  git clone https://github.com/ocaml/opam-repository-archive.git
+  git -C opam-repository-archive checkout %s
+  sudo ln -f /usr/bin/opam-2.4 /usr/bin/opam
+  opam update
+  opam repo add --set-default --rank=2 archive opam-repository-archive
+  mkdir t
+  cd t
+  for v in $(seq 0 3); do
+    opam source ocaml-config.$v
+  done
 End-of-Script
-RUN opam switch create ocaml %s%s
-RUN opam exec -- ocamlopt -v | head -n 1 > /home/opam/vnum
-|} platform stage_name repo packages;
-  bases
+FROM environment AS cache
+RUN <<End-of-Script
+  cd t
+|} repo_sha archive_sha;
+    let _ =
+      let source seen (name, opam) =
+        if StringMap.mem name excludes then
+          seen
+        else
+          let urls =
+            List.filter_map (fun (_, url) -> if OpamFile.URL.checksum url = [] then None else Some (OpamUrl.to_string (OpamFile.URL.url url))) (OpamFile.OPAM.extra_sources opam)
+          in
+          let urls =
+            Option.map (fun url -> if OpamFile.URL.checksum url = [] then urls else (OpamUrl.to_string (OpamFile.URL.url url))::urls) (OpamFile.OPAM.url opam)
+            |> Option.value ~default:urls
+            |> StringSet.of_list
+          in
+          if not (StringSet.is_empty (StringSet.diff urls seen)) then
+            let () = Printf.fprintf oc "  opam source %s\n" name in
+            StringSet.union urls seen
+          else
+            seen
+      in
+      List.fold_left source StringSet.empty (List.sort Stdlib.compare packages)
+    in
+    Printf.fprintf oc {|  cd ..
+  rm -rf t
+  echo Epoch1>epoch
+End-of-Script
+#RUN --mount=type=cache,id=carehome-download-cache,uid=1000,gid=1000,target=/home/opam/shared-cache <<End-of-Script
+#  rm -rf /home/opam/shared-cache/*
+#  cp -a /home/opam/.opam/download-cache/* /home/opam/shared-cache/
+#End-of-Script
+|};
+    let f bases (_, arch, (distro : Dockerfile_opam.Distro.distro), _, _, _) =
+      let key =
+        Dockerfile_opam.Distro.tag_of_distro (distro :> Dockerfile_opam.Distro.t) ^ (if arch = `I386 then "-32bit" else "") ^ "-base"
+      in
+      if StringSet.mem key bases then
+        bases
+      else
+        let () = base_image oc repo_sha archive_sha arch distro in
+        StringSet.add key bases
+    in
+    List.fold_left f StringSet.empty builds
+(*
+    Printf.fprintf oc {|
+FROM ocaml/opam:ubuntu-25.10-opam AS collect
+RUN --mount=from=cache,src=/home/opam,dst=/mnt/opam-cache \
+|};
+    let _ =
+      List.fold_left (fun bases (_, arch, distro, _, _, _) ->
+        let key = Ocaml_version.string_of_arch (arch : [`X86_64 | `I386] :> Ocaml_version.arch) ^ "-" ^ Dockerfile_opam.Distro.human_readable_string_of_distro (distro :> Dockerfile_opam.Distro.t) in
+        if StringSet.mem key bases then
+          bases
+        else
+          let syskey = if arch = `I386 then "32bit-" else "" in
+          let distro = Dockerfile_opam.Distro.tag_of_distro (distro :> Dockerfile_opam.Distro.t) in
+          let () = Printf.fprintf oc "    --mount=from=%s-%sbase,src=/home/opam,dst=/mnt/opam-%s-%sbase \\\n" distro syskey distro syskey in
+          StringSet.add key bases) StringSet.empty builds
+    in
+    Printf.fprintf oc {|    cat /mnt/opam-*/epoch > /home/opam/results
+|}
+*)
 
-let main () =
+(*
+let opam_version_in_distro = function
+| `Debian `V10 -> "2.2"
+| `Ubuntu `V20_04 -> "2.3"
+| _ -> "2.4"
+*)
+
+let is_slow packages =
+  List.exists
+    (fun elt -> let elt = String.lowercase_ascii elt in elt = "ber" || elt = "flambda" || elt = "forced_lto")
+    (String.split_on_char '+' (List.hd packages))
+
+let build_package oc ~slow ~pin filter _repo_sha _archive_sha borked ((previous, bases) as acc) (stage_name, arch, (distro : Dockerfile_opam.Distro.distro), _, repo, packages) =
+  let is_slow = is_slow packages in
+        let name = List.hd packages in
+        let _version =
+          OpamPackage.of_string name
+          |> OpamPackage.version
+          |> OpamPackage.Version.to_string
+          |> Ocaml_version.of_string_exn
+        in
+  (* Don't build the package at all if this we're building the slow Dockerfile (slow = true)
+     and this package is _not_ slow. The slow = false Dockerfile always contains everything
+     for the distro. *)
+  if not (filter distro) || slow && not is_slow (*|| Ocaml_version.major _version < 5*) then
+    acc
+  else
+    let key =
+      Dockerfile_opam.Distro.tag_of_distro (distro :> Dockerfile_opam.Distro.t) ^ (if arch = `I386 then "-32bit" else "") ^ "-base"
+    in
+    let bases = StringSet.remove key bases in
+(*
+      if StringSet.mem key bases then
+        bases
+      else
+        (*let () = base_image oc repo_sha archive_sha arch distro in*)
+        StringSet.add key bases
+    in
+*)
+    let platform =
+      let distro = Dockerfile_opam.Distro.tag_of_distro (distro :> Dockerfile_opam.Distro.t) in
+      if arch = `I386 then
+        "--platform=linux/i386 " ^ distro ^ "-32bit"
+      else
+        distro
+    in
+    let repo =
+      Option.fold ~none:"" ~some:(fun r -> "--repos=" ^ r ^ " ") repo
+    in
+    let packages =
+      match packages with
+      | [name] -> name
+      | packages -> "--packages=" ^ String.concat "," packages
+    in
+    let mount_previous, get_previous, next =
+      if StringMap.mem name borked then
+        "", "", previous
+      else
+        let next = Some ("test-" ^ stage_name) in
+        Option.map (fun previous -> "--mount=from=" ^ previous ^ ",src=/home/home,dst=/mnt/previous ", "\n  cp /mnt/previous/results /home/opam/results", next) previous
+        |> Option.value ~default:("", "", next)
+    in
+    Printf.fprintf oc {|
+FROM %s-base AS test-%s%s
+#COPY --from=collect /home/opam/results /home/opam/prime-lock
+#RUN --mount=type=cache,id=carehome-download-cache,uid=1000,gid=1000,target=/home/opam/shared-cache <<End-of-Script
+#  rm -rf /home/opam/.opam/download-cache/*
+#  mkdir -p /home/opam/.opam/download-cache
+#  cp -a /home/opam/shared-cache/* /home/opam/.opam/download-cache/
+#End-of-Script
+RUN <<End-of-Script%s
+mkdir -p /home/opam/logs
+for i in $(seq 2 -1 0); do
+  if opam switch create -v ocaml %s%s > /home/opam/logs/build-$i 2>&1; then
+    rm -f /home/opam/logs/build-$i
+    break
+  else
+    cat /home/opam/logs/build-$i
+  fi
+done
+test ! -e /home/opam/logs/build-0
+End-of-Script
+RUN %s<<End-of-Script%s
+  opam exec -- ocamlopt -v | head -n 1 >> /home/opam/results
+End-of-Script
+|} platform stage_name (if pin then "\nCOPY --from=pin /home/opam/results /home/opam/results" else "") (if pin then "\nrm -f /home/opam/results" else "") repo packages mount_previous get_previous;
+    (next, bases)
+
+let emit_stage ?(slow = false) ?(pin = false) filter name opam_repository_sha opam_repository_archive_sha borked excludes packages builds =
+  let filename = "Dockerfile." ^ name ^ (if slow then "-slow" else "") in
+  Printf.printf "Creating %s\n%!" filename;
+  Out_channel.with_open_text filename @@ fun oc ->
+    let bases = create_cache_stage oc opam_repository_sha opam_repository_archive_sha packages excludes builds in
+    let (next, bases) = List.fold_left (build_package oc ~slow ~pin filter opam_repository_sha opam_repository_archive_sha borked) (None, bases) builds in
+    Printf.fprintf oc {|
+FROM ocaml/opam:ubuntu-25.10-opam AS collect
+RUN --mount=from=%s,src=/home/opam,dst=/mnt/opam-last-build \|} (Option.get next);
+  StringSet.iter (fun base -> Printf.fprintf oc {|
+    --mount=from=%s,src=/home/opam,dst=/mnt/opam-%s \|} base base) bases;
+  Printf.fprintf oc {|
+  cat /mnt/opam-*/results > /home/opam/results
+|}
+(*
+    let _ =
+      List.fold_left (fun prefix (stage_name, _, distro, _, _, packages) ->
+        let name = List.hd packages in
+        let _version =
+          OpamPackage.of_string name
+          |> OpamPackage.version
+          |> OpamPackage.Version.to_string
+          |> Ocaml_version.of_string_exn
+        in
+        if (*Ocaml_version.major _version < 5 ||*) not (filter distro) || slow && not (is_slow packages) || (*not (List.exists ((=) "musl") (String.split_on_char '+' name)) || *)StringMap.mem name borked (*|| StringSet.mem name musl_clang*) then
+          prefix
+        else
+          let () = Printf.fprintf oc "%s --mount=from=test-%s,src=/home/opam,dst=/mnt/opam-%s \\\n" prefix stage_name stage_name in
+          "   ") "RUN" builds
+    in
+    Printf.fprintf oc {|    cat /mnt/opam-*/vnum > /home/opam/results
+|}
+*)
+
+let get_packages () =
   let+ main_repo =
     open_repository "opam-repository" >>= get_packages_tree "master"
   and+ archive_repo =
     open_repository "opam-repository-archive" >>= get_packages_tree "main"
   in
-  let all_packages = main_repo @ archive_repo in
-  let packages =
-    let p =
-      List.filter (fun (s, _) -> not (String.starts_with ~prefix:"ocaml-compiler." s))
-    in
-    p all_packages
-  in
-  let opam_repository_sha = "c603e596bfaf195a5c1a3baf992b11c1de5ad35b" in
-  let opam_repository_archive_sha = "7098d3c8e5dda3ac4c6b1f52e189b9b9f0d8c8e6" in
-  (* Packages which shouldn't be built on any system *)
-  let excludes = StringSet.of_list [
-    (* XXX Not available - can we test the formula with a partial evaluate for this? *)
-    "ocaml-variants.4.04.0+copatterns";
-    "ocaml-variants.4.14.1+trunk";
-    "ocaml-variants.4.14.2+trunk";
-    "ocaml-variants.5.0.0+trunk";
-    "ocaml-variants.5.1.0+trunk";
-    "ocaml-variants.5.1.1+trunk";
-    "ocaml-variants.5.2.0+trunk";
-    "ocaml-variants.5.2.1+trunk";
-    (* XXX Not solvable on Linux! *)
-    "ocaml-variants.5.2.0+msvc";
-    (* XXX Isn't really buildable any more, and probably ought to be disabled *)
-    "ocaml-variants.4.01.0+lsb";
-  ] in
+  main_repo @ archive_repo
+
+let generate_test_files opam_repository_sha opam_repository_archive_sha excludes packages =
   (* Packages which don't appear to be working properly - these get excluded at
      collection time *)
-  let borked = StringSet.of_list [
-(*
-    (* XXX Incorrect config? *)
-    "ocaml-variants.4.01.0+musl+static"; (* Strange dynamic loading error ?? *)
-    "ocaml-variants.4.02.1+musl+static"; (* Strange dynamic loading error ?? *)
-    "ocaml-variants.4.02.3+musl+static"; (* Strange dynamic loading error ?? *)
-*)
-(*
-    "ocaml-variants.4.07.1+musl+static+flambda"; (* Something very strange?! *)
-*)
-    (* XXX This has appeared possibly since switching the build to use opam 2.4.1 *)
-    "ocaml-variants.4.04.0+BER";
-(*
-    "ocaml-variants.4.12.0+domains";
-    "ocaml-variants.4.12.0+domains+effects";
-*)
+  let borked = StringMap.of_list [
+    (* XXX This has appeared possibly since switching the build to use opam 2.4.1? *)
+    "ocaml-variants.4.04.0+BER", "Needs investigating further";
   ] in
-  (* Packages which need a 32bit container *)
-  let legacy_32bit = StringSet.of_list [
-    "ocaml-variants.4.01.0+32bit";
-    "ocaml-variants.4.02.1+32bit";
-    "ocaml-variants.4.02.3+32bit";
-    "ocaml-variants.4.03.0+32bit";
-    "ocaml-variants.4.04.0+32bit";
-    "ocaml-variants.4.04.1+32bit";
-    "ocaml-variants.4.04.2+32bit";
-    "ocaml-variants.4.05.0+32bit";
-    "ocaml-variants.4.06.0+32bit";
-    "ocaml-variants.4.06.1+32bit";
-    "ocaml-variants.4.07.0+32bit";
-    "ocaml-variants.4.07.1+32bit";
-    "ocaml-variants.4.08.0+32bit";
-    "ocaml-variants.4.08.1+32bit";
-    "ocaml-variants.4.09.0+32bit";
-    "ocaml-variants.4.09.1+32bit";
-    "ocaml-variants.4.10.0+32bit";
-    "ocaml-variants.4.10.1+32bit";
-    "ocaml-variants.4.10.2+32bit";
-    "ocaml-variants.4.11.0+32bit";
-    "ocaml-variants.4.11.1+32bit";
-    "ocaml-variants.4.11.2+32bit";
-  ] in
-  (* musl packages which require the musl-clang wrapper *)
-  (* XXX Not been able to build these so far, but it looks as though they may
-         only have ever worked on Arch - so we need GCC 15 patches first *)
+  (* Packages which need a 32bit container (these are a *)
+  let requires_32bit compiler packages =
+    List.mem "ocaml-option-32bit" packages
+    || String.ends_with ~suffix:"+32bit" compiler
+  in
+  (* Packages build with musl and clang *)
   let musl_clang = StringSet.of_list [
     "ocaml-variants.4.05.0+musl+flambda"; (* musl-clang *)
     "ocaml-variants.4.05.0+musl+static+flambda"; (* musl-clang *)
@@ -974,43 +1046,15 @@ let main () =
     "ocaml-variants.4.06.1+musl+flambda"; (* musl-clang *)
     "ocaml-variants.4.06.1+musl+static+flambda"; (* musl-clang *)
   ] in
-  (* musl packages requiring updated depexts / recipes *)
-  let musl_depexts = StringSet.of_list [
-    "ocaml-variants.4.01.0+musl";
-    "ocaml-variants.4.01.0+musl+static";
-    "ocaml-variants.4.02.1+musl";
-    "ocaml-variants.4.02.1+musl+static";
-    "ocaml-variants.4.02.3+musl";
-    "ocaml-variants.4.02.3+musl+static";
-    "ocaml-variants.4.05.0+musl+flambda";
-    "ocaml-variants.4.05.0+musl+static+flambda";
-    "ocaml-variants.4.06.0+musl+flambda";
-    "ocaml-variants.4.06.0+musl+static+flambda";
-    "ocaml-variants.4.06.1+musl+flambda";
-    "ocaml-variants.4.06.1+musl+static+flambda";
-    "ocaml-variants.4.07.1+musl+flambda";
-    "ocaml-variants.4.07.1+musl+static+flambda";
-    "ocaml-variants.4.08.0+musl+flambda";
-    "ocaml-variants.4.08.0+musl+static+flambda";
-    "ocaml-variants.4.08.1+musl+flambda";
-    "ocaml-variants.4.08.1+musl+static+flambda";
-    "ocaml-variants.4.09.0+musl+flambda";
-    "ocaml-variants.4.09.0+musl+static+flambda";
-    "ocaml-variants.4.09.1+musl+flambda";
-    "ocaml-variants.4.09.1+musl+static+flambda";
-    "ocaml-variants.4.10.0+musl+flambda";
-    "ocaml-variants.4.10.0+musl+static+flambda";
-    "ocaml-variants.4.10.1+musl+flambda";
-    "ocaml-variants.4.10.1+musl+static+flambda";
-    "ocaml-variants.4.10.2+musl+flambda";
-    "ocaml-variants.4.10.2+musl+static+flambda";
-    "ocaml-variants.4.11.0+musl+flambda";
-    "ocaml-variants.4.11.0+musl+static+flambda";
-    "ocaml-variants.4.11.1+musl+flambda";
-    "ocaml-variants.4.11.1+musl+static+flambda";
-    "ocaml-variants.4.11.2+musl+flambda";
-    "ocaml-variants.4.11.2+musl+static+flambda";
-  ] in
+  (* Packages which require musl patches at the moment (= all of them) *)
+  let is_musl_package compiler packages =
+    let uses_option_package = function
+    | "ocaml-option-static" | "ocaml-option-musl" -> true
+    | _ -> false
+    in
+    List.exists uses_option_package packages
+    || List.mem "musl" (String.split_on_char '+' compiler)
+  in
   (* Packages missing gcc10 patches *)
   let gcc10 = StringSet.of_list [
     "ocaml-variants.4.00.0+debug-runtime";
@@ -1055,191 +1099,574 @@ let main () =
     "ocaml-variants.4.09.0+no-flat-float-array";
     "ocaml-variants.4.09.0+spacetime";
   ] in
-  let add_package builds (name, _) =
-    if StringSet.mem name excludes (*|| StringSet.mem name musl_clang*) then
-      builds
-    else
-      let stage_name =
+  let build_test name version additional_packages =
+    let stage_name_suffix =
+      let mangle name =
+        let name =
+          if String.starts_with ~prefix:"ocaml-option-" name then
+            String.sub name 13 (String.length name - 13)
+          else
+            name
+        in
         String.map (function '+' -> '-' | c -> c) (String.lowercase_ascii name)
       in
-      let stage_name (distro : Dockerfile_opam.Distro.distro) =
-        String.lowercase_ascii (Dockerfile_opam.Distro.human_readable_short_string_of_distro (distro :> Dockerfile_opam.Distro.t)) ^ "-" ^ stage_name
+      let suffix =
+        if additional_packages = [] then
+          ""
+        else
+          "-" ^ String.concat "-" (List.map mangle additional_packages)
       in
-      let version =
-        OpamPackage.of_string name
-        |> OpamPackage.version
-        |> OpamPackage.Version.to_string
-        |> Ocaml_version.of_string_exn
+      mangle name ^ suffix
+    in
+    let stage_name (distro : Dockerfile_opam.Distro.distro) =
+      let distro_name =
+        Dockerfile_opam.Distro.human_readable_short_string_of_distro
+          (distro :> Dockerfile_opam.Distro.t)
       in
-      let repo, packages =
-        if StringSet.mem name musl_depexts then
+      String.lowercase_ascii distro_name ^ "-" ^ stage_name_suffix
+    in
+    let is_musl_package = is_musl_package name additional_packages in
+    let repo, additional_packages =
+      if is_musl_package then
+        (* XXX No PR proposed as yet! *)
+        Some "dra27=git+https://github.com/dra27/opam-repository.git#musl-depexts", additional_packages
+      else match name with
+      | "ocaml-variants.5.4.1+trunk" ->
+          (* Fixed in ocaml/opam-repository#28793 *)
+          Some "dra27=git+https://github.com/dra27/opam-repository.git#5.4-trunk", additional_packages
+      | "ocaml-variants.5.0.0+tsan" ->
+          (* Fixed in ocaml/opam-repository#28794 *)
+          None, "conf-unwind" :: additional_packages
+      | "ocaml-variants.4.12.0+domains"
+      | "ocaml-variants.4.12.0+domains+effects" ->
           (* XXX No PR proposed as yet! *)
-          (* TODO This only appears to work on platforms which provide musl-clang which neither Debian nor Alpine seem to do *)
-          Some "dra27=git+https://github.com/dra27/opam-repository.git#musl-depexts", [name]
-        else match name with
-        | "ocaml-variants.5.4.1+trunk" ->
-            (* Fixed in ocaml/opam-repository#28793 *)
-            Some "dra27=git+https://github.com/dra27/opam-repository.git#5.4-trunk", [name]
-        | "ocaml-variants.5.0.0+tsan" ->
-            (* Fixed in ocaml/opam-repository#28794 *)
-            None, [name; "conf-unwind"]
-        | "ocaml-variants.4.12.0+domains"
-        | "ocaml-variants.4.12.0+domains+effects" ->
-            (* XXX No PR proposed as yet! *)
-            Some "dra27=git+https://github.com/dra27/opam-repository.git#alpine-multicore", [name]
-        | "ocaml-variants.4.04.0+trunk+forced_lto" ->
-            (* XXX No PR proposed as yet! *)
-            Some "dra27=git+https://github.com/dra27/opam-repository.git#fix-lto", [name]
-        | _ ->
-            None, [name]
+          Some "dra27=git+https://github.com/dra27/opam-repository.git#alpine-multicore", additional_packages
+      | "ocaml-variants.4.04.0+trunk+forced_lto" ->
+          (* XXX No PR proposed as yet! *)
+          Some "dra27=git+https://github.com/dra27/opam-repository.git#fix-lto", additional_packages
+      | _ ->
+          None, additional_packages
+    in
+    let gcc10_reason = Some "Requires GCC < 10.0.0 (to avoid -fno-common default)" in
+    (* XXX Description needed! implicit declarations? *)
+    let gcc14_reason = Some "Requires GCC < 14.0.0 (to avoid ???)" in
+    (* XXX Description needed! default language change? *)
+    let gcc15_reason = Some "Requires GCC < 15.0.0 (to avoid ???)" in
+    if requires_32bit name additional_packages then
+      let version, explanation =
+        if StringSet.mem name gcc10 then
+          `V10, gcc10_reason
+        else
+          `V12, Some "Last i386 version of Debian"
       in
-      if StringSet.mem name legacy_32bit then
-        let version =
-          if StringSet.mem name gcc10 then
-            `V10
-          else
-            `V12
+      let distro = `Debian version in
+      [Either.Right (stage_name distro, (*`I386*)`X86_64, distro, explanation, repo, (name :: additional_packages))]
+    else
+      let gcc_constraint =
+        if StringSet.mem name gcc10 then
+          `GCC10
+        else if Ocaml_version.compare version Releases.v4_08_0 < 0 then
+          `GCC14
+        else if Ocaml_version.compare version Releases.v4_14_2 < 0
+                || Ocaml_version.major version = 5
+                   && Ocaml_version.minor version = 0 then
+          `GCC15
+        else
+          `None
+      in
+      let f (latest_distro : Dockerfile_opam.Distro.distro) =
+        let distro, explanation =
+          match latest_distro, gcc_constraint with
+          | `Ubuntu _, `GCC10 ->
+              (* Ubuntu 20.10 uses gcc 10.2.0 *)
+              Some (`Ubuntu `V20_04), gcc10_reason
+          | `Ubuntu _, `GCC14 ->
+              (* Ubuntu 24.10 uses gcc 14.2.0 *)
+              Some (`Ubuntu `V24_04), gcc14_reason
+          | `Ubuntu _, `GCC15 ->
+              (* Ubuntu 25.10 uses gcc 15.2.0 *)
+              Some (`Ubuntu `V25_04), gcc15_reason
+          | `Alpine _, `GCC10 ->
+              Some (`Alpine `V3_12), gcc10_reason
+          | `Alpine _, `GCC14 ->
+              Some (`Alpine `V3_20), gcc14_reason
+          | `Alpine _, `GCC15 ->
+              Some (`Alpine `V3_20), gcc15_reason
+          | `Archlinux `Latest, `GCC10 ->
+              None, gcc10_reason
+          | `Archlinux `Latest, `GCC14 ->
+              None, gcc14_reason
+          | `Archlinux `Latest, `GCC15 ->
+              None, gcc15_reason
+          | `CentOS _, `GCC10 ->
+              Some (`CentOS `V8), gcc10_reason
+          | `CentOS _, `GCC14 ->
+              Some (`CentOS `V9), gcc14_reason
+          | `CentOS _, `GCC15 ->
+              Some (`CentOS `V9), gcc15_reason
+          | `Debian _, `GCC10 ->
+              Some (`Debian `V10), gcc10_reason
+          | `Debian _, `GCC14 ->
+              Some (`Debian `V12), gcc14_reason
+          | `Debian _, `GCC15 ->
+              Some (`Debian `V12), gcc15_reason
+          | `Fedora _, `GCC10 ->
+              None, gcc10_reason
+          | `Fedora _, `GCC14 ->
+              Some (`Fedora `V39), gcc14_reason
+          | `Fedora _, `GCC15 ->
+              Some (`Fedora `V41), gcc15_reason
+          | `OpenSUSE _, `GCC10 ->
+              Some (`OpenSUSE `V15_6), gcc10_reason
+          | `OpenSUSE _, `GCC14 ->
+              Some (`OpenSUSE `V15_6), gcc14_reason
+          | `OpenSUSE _, `GCC15 ->
+              Some (`OpenSUSE `V15_6), gcc15_reason
+          | `OracleLinux _, `GCC10 ->
+              Some (`OracleLinux `V8), gcc10_reason
+          | `OracleLinux _, `GCC14 ->
+              Some (`OracleLinux `V9), gcc14_reason
+          | `OracleLinux _, `GCC15 ->
+              Some (`OracleLinux `V9), gcc15_reason
+          | distro, _ ->
+              Some distro, None
         in
-        let distro = `Debian version in
-        (stage_name distro, `I386, distro, repo, packages)::builds
-(*
-      else if StringSet.mem name musl_clang then
-        let distro = `Archlinux `Latest in
-        (stage_name distro, `X86_64, distro, repo, packages)::builds
-*)
-      else
-        let gcc_constraint =
-          if StringSet.mem name gcc10 then
-            `GCC10
-          else if Ocaml_version.compare version Releases.v4_08_0 < 0 then
-            `GCC14
-          else if Ocaml_version.compare version Releases.v4_14_2 < 0
-                  || Ocaml_version.major version = 5
-                     && Ocaml_version.minor version = 0 then
-            `GCC15
-          else
-            `None
+        let distro, explanation =
+          let is_tsan =
+            List.mem "ocaml-option-tsan" additional_packages
+            || String.ends_with ~suffix:"+tsan" name
+          in
+          match distro with
+          | Some ((`Alpine _ | `CentOS _ | `Fedora _ | `OracleLinux _))
+            when is_tsan ->
+              (* XXX To be investigated *)
+              None, Some "libtsan required?"
+          | Some `Archlinux _
+            when is_tsan (*List.mem (Ocaml_version.major version, Ocaml_version.minor version, Option.get (Ocaml_version.patch version))
+                 [(5, 2, 0); (5, 2, 1); (5, 3, 0); (5, 4, 0)]*) ->
+              (* To be investigated... *)
+              None, Some "TSAN alarm failure"
+          | _ ->
+              distro, explanation
         in
-        let f (distro : Dockerfile_opam.Distro.distro) =
-          let distro =
-            match distro, gcc_constraint with
-            | `Ubuntu _, `GCC10 ->
-                (* Ubuntu 20.10 uses gcc 10.2.0 *)
-                Some (`Ubuntu `V20_04)
-            | `Ubuntu _, `GCC14 ->
-                (* Ubuntu 24.10 uses gcc 14.2.0 *)
-                Some (`Ubuntu `V24_04)
-            | `Ubuntu _, `GCC15 ->
-                (* Ubuntu 25.10 uses gcc 15.2.0 *)
-                Some (`Ubuntu `V25_04)
-            | `Alpine _, `GCC10 ->
-                Some (`Alpine `V3_12)
-            | `Alpine _, (`GCC14 | `GCC15) ->
-                Some (`Alpine `V3_20)
-            | `Archlinux `Latest, (`GCC10 | `GCC14 | `GCC15) ->
-                None
-            | `CentOS _, `GCC10 ->
-                Some (`CentOS `V8)
-            | `CentOS _, (`GCC14 | `GCC15) ->
-                Some (`CentOS `V9)
-            | `Debian _, `GCC10 ->
-                Some (`Debian `V10)
-            | `Debian _, (`GCC14 | `GCC15) ->
-                Some (`Debian `V12)
-            | `Fedora _, `GCC10 ->
-                None
-            | `Fedora _, `GCC14 ->
-                Some (`Fedora `V39)
-            | `Fedora _, `GCC15 ->
-                Some (`Fedora `V41)
-            | `OpenSUSE _, (`GCC10 | `GCC14 | `GCC15) ->
-                Some (`OpenSUSE `V15_6)
-            | `OracleLinux _, `GCC10 ->
-                Some (`OracleLinux `V8)
-            | `OracleLinux _, (`GCC14 | `GCC15) ->
-                Some (`OracleLinux `V9)
-            | distro, _ ->
-                Some distro
-          in
-          let distro =
-            match name, distro with
-            | ("ocaml-variants.5.0.0+tsan" | "ocaml-variants.5.1.0+tsan" | "ocaml-variants.5.1.1+tsan"), Some ((`Alpine _ | `CentOS _ | `Fedora _ | `OracleLinux _)) ->
-                (* XXX libtsan? *)
-                None
-            | ("ocaml-variants.4.12.0+domains" | "ocaml-variants.4.12.0+domains+effects"), Some (`Alpine _) ->
-                (* libexecinfo-dev required (removed in 3.17+) *)
-                Some (`Alpine `V3_16)
-            | "ocaml-variants.4.04.0+trunk+forced_lto", Some (`OpenSUSE _) ->
-                (* XXX No sigaltstack patch - need glibc < 2.34 *)
-                Some (`OpenSUSE `V15_5)
-(*
-            | _, Some (`OpenSUSE _ | `CentOS _) ->
-                (* Docker... *)
-                None
-*)
-            | "ocaml-base-compiler.3.08.3", Some (`Alpine _) ->
-                (* XXX Temporary - needs a patch from 3.08.4 to .depend in graph *)
-                None
-            | ("ocaml-base-compiler.3.11.0" | "ocaml-base-compiler.3.11.1"), Some (`Alpine _) ->
-                (* XXX Segfaulting/unstable on Alpine? (3.11.2 seems fine) *)
-                None
-            | _ ->
-                distro
-          in
-          let distro =
-            if StringSet.mem name musl_clang then
-              match distro with
+        let distro, explanation =
+          match name, distro with
+          | ("ocaml-variants.4.12.0+domains" | "ocaml-variants.4.12.0+domains+effects"),
+            Some (`Alpine _) ->
+              (* libexecinfo-dev required (removed in 3.17+) *)
+              Some (`Alpine `V3_16), Some "libexecinfo-dev required, which was removed after Alpine 3.16)"
+          | "ocaml-variants.4.04.0+trunk+forced_lto",
+            Some (`OpenSUSE _) ->
+              (* XXX No sigaltstack patch - need glibc < 2.34 *)
+              Some (`OpenSUSE `V15_5), Some "Need glibc < 2.34 (sigaltstack patch missing)"
+          | "ocaml-base-compiler.3.08.3",
+            Some (`Alpine _) ->
+              (* XXX Temporary - needs a patch from 3.08.4 to .depend in graph *)
+              None, Some "Patch required to otherlibs/graph/.depend"
+          | ("ocaml-base-compiler.3.11.0" | "ocaml-base-compiler.3.11.1"),
+            Some (`Alpine _) ->
+              (* XXX Segfaulting/unstable on Alpine? (3.11.2 seems fine) *)
+              None, Some "Unexpectedly unstable on Alpine"
+          | _ ->
+              distro, explanation
+        in
+        let distro, explanation =
+          match distro with
+          | Some (`OracleLinux _ | `CentOS _ | `OpenSUSE _)
+            when is_musl_package ->
+              (* No musl support *)
+              None, Some "Missing depext support for musl"
+          | _ ->
+              distro, explanation
+        in
+        let distro, explanation =
+          if StringSet.mem name musl_clang then
+            (* XXX These should all be being attempted and tagged as not having depexts? *)
+            match distro with
+            | Some (`Debian _) ->
                 (* XXX Not yet figured out the clang ones for Debian *)
-              | Some (`Archlinux _) -> distro
-              | Some (`Alpine _) ->
-                  (* This is very dirty because Alpine 3.20 has clang 17 but we
-                     need 3.17 with clang 15 for these old versions (implicit
-                     declarations). We then have to go back to 3.12 to get clang
-                     10 in order not to hit ocmal/ocaml#9981 *)
-                  Some (`Alpine `V3_12)
-              | _ -> None
-            else if List.exists ((=) "musl") (String.split_on_char '+' name) then
-              match distro with
-              | Some (`OracleLinux _ | `CentOS _ | `OpenSUSE _) ->
-                  (* No musl support *)
-                  None
-              | _ ->
-                  distro
-            else
-              distro
-          in
-          Option.map (fun distro ->
-            (stage_name distro, `X86_64, distro, repo, packages)) distro 
+                None, Some "Unclear how to get musl-clang wrapper on Debian"
+            | Some (`Ubuntu _) ->
+                (* XXX Not yet figured out the clang ones for Ubuntu *)
+                None, Some "Unclear how to get musl-clang wrapper on Ubuntu"
+            | Some (`Archlinux _) ->
+                distro, explanation
+            | Some (`Alpine _) ->
+                (* This is very dirty because Alpine 3.20 has clang 17 but we
+                   need 3.17 with clang 15 for these old versions (implicit
+                   declarations). We then have to go back to 3.12 to get clang
+                   10 in order not to hit ocmal/ocaml#9981 *)
+                Some (`Alpine `V3_12), Some "clang < 11 needed in order to avoid ocaml/ocaml#9981"
+            | Some (`Fedora _)
+            | None ->
+                distro, explanation
+            | Some _ ->
+                assert false
+          else
+            distro, explanation
         in
-        List.filter_map f distros @ builds
+        match distro, explanation with
+        | None, Some explanation ->
+            Either.Left (latest_distro, explanation)
+        | None, None ->
+            assert false
+        | Some distro, explanation ->
+            Either.Right (stage_name distro, `X86_64, distro, explanation, repo, name :: additional_packages)
+      in
+      List.map f distros
   in
-  let builds = List.fold_left add_package [] packages in
-  create_cache_stage opam_repository_sha opam_repository_archive_sha all_packages excludes;
+  let expand_package (name, _) =
+    let version =
+      let i = String.index name '.' + 1 in
+      String.sub name i (String.length name - i)
+      |> Ocaml_version.of_string_exn 
+    in
+    match StringMap.find_opt name excludes with
+    | Some reason ->
+        [(name, version, [], Either.Left reason)]
+    | None ->
+        let version =
+          if Ocaml_version.major version = 3
+             && Ocaml_version.minor version = 7 then
+            let patch =
+              Option.map int_of_string (Ocaml_version.extra version)
+            in
+            Ocaml_version.with_patch
+              (Ocaml_version.without_variant version)
+              (if patch = None then Some 0 else patch)
+          else
+            version
+        in
+        (* XXX This could be done for the appropriate trunk packages, or with a
+               wider matrix (afl+flambda, et. al) for the latest release,
+               etc. *)
+        let options =
+          let all = Fun.const true
+          and not_5_0_0 version =
+            Ocaml_version.major version <> 5
+            || Ocaml_version.minor version <> 0
+            || Ocaml_version.patch version <> Some 0
+          and since_5_1_0 version =
+            Ocaml_version.major version = 5 && Ocaml_version.minor version >= 1
+          and since_5_2_0 version =
+            Ocaml_version.major version = 5 && Ocaml_version.minor version >= 2
+          in [
+          "ocaml-option-32bit", all;
+          "ocaml-option-afl", all;
+          "ocaml-option-bytecode-only", all;
+          "ocaml-option-flambda", all;
+          "ocaml-option-fp", not_5_0_0;
+          "ocaml-option-musl", all;
+          "ocaml-option-no-compression", since_5_1_0;
+          "ocaml-option-no-flat-float-array", all;
+          "ocaml-option-static", all;
+          "ocaml-option-tsan", since_5_2_0;
+        ] in
+        let extras =
+          if String.ends_with ~suffix:"+options" name then
+            let f (option_package, filter) =
+              if filter version then
+                Some ([option_package])
+              else
+                None
+            in
+            List.filter_map f options
+          else
+            []
+        in
+        List.map
+          (fun extras -> name, version, extras, Either.Right (build_test name version extras))
+          ([] :: extras)
 (*
-  (* Temporary *)
-  base_image opam_repository_sha opam_repository_archive_sha `I386 (`Debian `V10);
-  base_image opam_repository_sha opam_repository_archive_sha `I386 (`Debian `V12);
-  base_image opam_repository_sha opam_repository_archive_sha `X86_64 (`Archlinux `Latest);
-  base_image opam_repository_sha opam_repository_archive_sha `X86_64 (`Ubuntu `V20_04);
-  base_image opam_repository_sha opam_repository_archive_sha `X86_64 (`Ubuntu `V24_04);
-  base_image opam_repository_sha opam_repository_archive_sha `X86_64 (`Ubuntu `V25_04);
-  base_image opam_repository_sha opam_repository_archive_sha `X86_64 (`Ubuntu `V25_10);
+        (name, Either.Right (List.flatten (List.map build_test ((name, version, [])::extras))))
 *)
-  let _ = List.fold_left (build_package opam_repository_sha opam_repository_archive_sha) StringSet.empty builds in
-  Printf.printf {|
-FROM ocaml/opam:ubuntu-25.10-opam AS collect
-|};
-  let _ =
-    List.fold_left (fun prefix (stage_name, _, _, _, packages) ->
-      let name = List.hd packages in
-      if (*not (List.exists ((=) "musl") (String.split_on_char '+' name)) || *)StringSet.mem name borked (*|| StringSet.mem name musl_clang*) then
-        prefix
-      else
-        let () = Printf.printf "%s --mount=from=test-%s,src=/home/opam,dst=/mnt/opam-%s \\\n" prefix stage_name stage_name in
-        "   ") "RUN" builds
   in
-  Printf.printf {|    cat /mnt/opam-*/vnum > /home/opam/results
+  let tests = List.flatten (List.map expand_package packages) in
+  let builds =
+    let f (_, _, _, action) =
+      match action with
+      | Either.Left _ ->
+          []
+      | Either.Right builds ->
+          List.filter_map Either.find_right builds
+    in
+    List.flatten (List.map f tests)
+  in
+  (* TODO report on packages - i.e. determine what's built and not built, etc. *)
+(*
+  create_cache_stage opam_repository_sha opam_repository_archive_sha packages excludes builds;
+*)
+  let splits =
+    let rec split_up l =
+      match l with
+      | [] ->
+          []
+      | [_; _] | [_] ->
+          [l]
+      | d1 :: d2 :: ([_; _] as l) ->
+          [[d1; d2]; l]
+      | d1 :: d2 :: d3 :: l ->
+          [d1; d2; d3] :: split_up l
+    in
+    split_up distros
+  in
+  let process_distros index (distros : Dockerfile_opam.Distro.distro list) =
+(*
+    let short_name =
+      String.lowercase_ascii (Dockerfile_opam.Distro.human_readable_short_string_of_distro (distro :> Dockerfile_opam.Distro.t))
+    in
+*)
+    let name = Printf.sprintf "batch-%d" index in
+    let filter (d : Dockerfile_opam.Distro.distro) =
+      List.exists (Dockerfile_opam.Distro.is_same_distro (d :> Dockerfile_opam.Distro.t)) (distros :> Dockerfile_opam.Distro.t list)
+    in
+    emit_stage filter name opam_repository_sha opam_repository_archive_sha borked excludes packages builds;
+    succ index
+  in 
+  let _ = List.fold_left process_distros 0 splits in
+  emit_stage (Fun.const true) "main" opam_repository_sha opam_repository_archive_sha borked excludes packages builds;
+  let report oc (package, _, additional_packages, action) =
+    let notes =
+      let additional_packages =
+        List.filter (String.starts_with ~prefix:"ocaml-option-") additional_packages
+      in
+      if additional_packages = [] then
+        ""
+      else
+        " with " ^ String.concat ", " additional_packages
+    in
+    let print fmt = Printf.fprintf oc fmt in
+    print "- %s%s" package notes;
+    match action with
+    | Either.Left explanation ->
+        print "; skipped (%s)\n" explanation
+    | Either.Right builds ->
+        let print_build = function
+        | Either.Left (distro, explanation) ->
+            let distro =
+              Dockerfile_opam.Distro.human_readable_short_string_of_distro (distro :> Dockerfile_opam.Distro.t)
+            in
+            print "\n  - %s; skipped (%s)" distro explanation
+        | Either.Right (_, _, _, None, _, _) ->
+            ()
+        | Either.Right (_, arch, (distro : Dockerfile_opam.Distro.distro), Some explanation, repo, _) ->
+            let arch =
+              if arch = `X86_64 then
+                ""
+              else
+                " on " ^ Ocaml_version.string_of_arch arch
+            in
+            let distro =
+              Dockerfile_opam.Distro.human_readable_string_of_distro (distro :> Dockerfile_opam.Distro.t)
+            in
+            print "\n  - %s%s (%s)" distro arch explanation;
+            Option.iter (print "\n    - Using %s") repo
+        in
+        let compare_build l r =
+          match l, r with
+          | Either.Left _, Either.Right _ ->
+              1
+          | Either.Left ((l : Dockerfile_opam.Distro.distro), _), Either.Left ((r : Dockerfile_opam.Distro.distro), _) ->
+              Dockerfile_opam.Distro.compare (l :> Dockerfile_opam.Distro.t) (r :> Dockerfile_opam.Distro.t)
+          | Either.Right _, Either.Left _ ->
+              -1
+          | Either.Right (l_name, l_arch, (l_distro : Dockerfile_opam.Distro.distro), _, _, _),
+            Either.Right (r_name, r_arch, (r_distro : Dockerfile_opam.Distro.distro), _, _, _) ->
+              let result = String.compare l_name r_name in
+              let result =
+                if result = 0 then
+                  compare l_arch r_arch
+                else
+                  result
+              in
+              if result = 0 then
+                Dockerfile_opam.Distro.compare (l_distro :> Dockerfile_opam.Distro.t) (r_distro :> Dockerfile_opam.Distro.t)
+              else
+                result
+        in
+        List.iter print_build (List.sort compare_build builds);
+        print "\n"
+  in
+  let compare_test (l, _, l_add, _) (r, _, r_add, _) =
+    let result = String.compare l r in
+    if result = 0 then
+      compare l_add r_add
+    else
+      result
+  in
+  Printf.printf "Creating Status.md\n%!";
+  let emit_status oc = List.iter (report oc) (List.sort compare_test tests) in
+  Out_channel.with_open_text "Status.md" emit_status;
+  let filter_tests = function
+  | (name, version, additional_packages, Either.Right tests) ->
+      let tests = List.filter_map Either.find_right tests in
+      if tests = [] then
+        None
+      else
+        Some (List.map (fun action -> name, version, additional_packages, action) tests)
+  | (_, _, _, Either.Left _) ->
+      None
+  in
+  List.flatten (List.filter_map filter_tests tests)
+
+(* Packages which shouldn't be built on any system *)
+let excludes =
+  let old_trunk = "Old, now unavailable, +trunk package" in
+  StringMap.of_list [
+  (* XXX Not available - can we test the formula with a partial evaluate for this? *)
+  "ocaml-variants.4.04.0+copatterns", old_trunk;
+  "ocaml-variants.4.14.1+trunk", old_trunk;
+  "ocaml-variants.4.14.2+trunk", old_trunk;
+  "ocaml-variants.5.0.0+trunk", old_trunk;
+  "ocaml-variants.5.1.0+trunk", old_trunk;
+  "ocaml-variants.5.1.1+trunk", old_trunk;
+  "ocaml-variants.5.2.0+trunk", old_trunk;
+  "ocaml-variants.5.2.1+trunk", old_trunk;
+  (* XXX Not solvable on Linux - also testable via availability? *)
+  "ocaml-variants.5.2.0+msvc", "Windows-only package";
+  (* XXX Isn't really buildable any more, and probably ought to be disabled *)
+  "ocaml-variants.4.01.0+lsb", "Unbuildable in 2025";
+]
+
+(*
+let run_with_result file =
+  let cmd = Bos.Cmd.(v "docker" % "build" % "-f" % file % ".") in
+
+  let result = Bos.OS.Cmd.run_out cmd |> Bos.OS.Cmd.out_lines in
+
+  match result with
+  | Ok (lines, (status_info, exit_status)) ->
+      let exit_code = match exit_status with
+        | `Exited n -> n
+        | `Signaled n -> 128 + n
+      in
+      (lines, exit_code)
+  | Error _ -> ([], 1) (* Don't care... for now... check what this actually means! *)
+*)
+
+let stack_em_pack_em_and_rack_em opam_repository_sha opam_repository_archive_sha packages excludes builds =
+  let cores = ref 64 in
+  let cores_lock = Eio.Mutex.create () in
+  let freed = Eio.Condition.create () in
+  let execute env sw (_nv, version, _additional_packages, ((stage, _arch, _distro, _explanation, _repo, _pacakges) as build)) =
+    let dockerfile =
+      let dockerfile = "Dockerfile.build-" ^ stage in
+      Out_channel.with_open_text dockerfile @@ fun oc ->
+        let bases = create_cache_stage oc opam_repository_sha opam_repository_archive_sha packages excludes [build] in
+        let _ = List.fold_left (build_package oc ~slow:false ~pin:false (Fun.const true) opam_repository_sha opam_repository_archive_sha StringMap.empty) (None, bases) [build]
+        in
+        dockerfile
+    in
+    let required =
+      if (Ocaml_version.major version, Ocaml_version.minor version) >= (4, 7) then
+        16
+      else
+        1
+    in
+    let acquire required =
+      let rec loop () =
+        if !cores >= required then begin
+          cores := !cores - required;
+          Eio.Mutex.unlock cores_lock
+        end else
+          loop ((*Printf.printf "%s: waiting for %d cores" dockerfile required;*) Eio.Condition.await freed cores_lock)
+      in
+      loop (Eio.Mutex.lock cores_lock)
+    in
+    let () = acquire required in
+    let mgr = Eio.Stdenv.process_mgr env in
+    Printf.printf "Starting %s\n%!" dockerfile;
+    let stdout_r, stdout = Eio.Process.pipe mgr ~sw in
+    let stderr_r, stderr = Eio.Process.pipe mgr ~sw in
+    let proc = Eio.Process.spawn ~sw mgr ~stdout ~stderr ["docker"; "build"; "--output"; "type=cacheonly"; "--progress=plain"; "-f"; dockerfile; "."] in
+    let read_lines flow =
+      let r = Eio.Buf_read.of_flow flow ~max_size:1_000_000 in
+      let lines = ref [] in
+      let rec loop seen_done =
+        match Eio.Buf_read.line r with
+        | line ->
+            let seen_done =
+              if String.starts_with ~prefix:"#1 DONE " line then begin
+                Printf.printf "Building %s\n%!" dockerfile;
+                true
+              end else
+                seen_done
+            in
+            lines := line :: !lines;
+            loop seen_done
+        | exception End_of_file ->
+            List.rev !lines
+      in
+      loop false
+    in
+    let stdout_lines = ref [] in
+    let stderr_lines = ref [] in
+    let () =
+      Eio.Flow.close stdout;
+      Eio.Flow.close stderr;
+
+      Eio.Fiber.both
+        (fun () -> stdout_lines := read_lines stdout_r)
+        (fun () -> stderr_lines := read_lines stderr_r)
+    in
+    let status = Eio.Process.await proc in
+    let result =
+      match status with
+      | `Exited n -> n
+      | `Signaled n -> 128 + n
+    in
+    Eio.Mutex.use_rw ~protect:false cores_lock @@ fun () ->
+      cores := !cores + required;
+      Eio.Condition.broadcast freed;
+      Printf.printf "Completed %s with exit code %d\n" dockerfile result;
+      result
+  in
+  Eio_main.run @@ fun env ->
+    Eio.Switch.run @@ fun sw ->
+      Eio.Fiber.List.map (execute env sw) builds
+
+let main () =
+  (* Analyse the Git repositories and return the complete list of analysed opam
+     files *)
+  let+ all_packages = get_packages () in
+  (* Remove ocaml-compiler - it's tested indirectly via other packages *)
+  let packages =
+    let p =
+      List.filter (fun (s, _) -> not (String.starts_with ~prefix:"ocaml-compiler." s))
+    in
+    p all_packages
+  in
+  (* XXX These two shas should be plumbed from elsewhere - i.e. from the HEAD
+         commits analysed previously by get_packages *)
+  let opam_repository_sha = "c603e596bfaf195a5c1a3baf992b11c1de5ad35b" in
+  let opam_repository_archive_sha = "7098d3c8e5dda3ac4c6b1f52e189b9b9f0d8c8e6" in
+  let tests = generate_test_files opam_repository_sha opam_repository_archive_sha excludes packages in
+  let _ =
+    Printf.printf "Creating Dockerfile.basis\n%!";
+    Out_channel.with_open_text "Dockerfile.basis" @@ fun oc ->
+      let builds = List.map (function (_, _, _, build) -> build) tests in
+      let bases = create_cache_stage oc opam_repository_sha opam_repository_archive_sha packages excludes builds in
+      Printf.fprintf oc {|
+FROM ocaml/opam:ubuntu-25.10-opam AS collect
+RUN --mount=from=cache,src=/home/opam,dst=/mnt/opam-cache \
+|};
+      let _ =
+        StringSet.iter (fun base ->
+          Printf.fprintf oc "    --mount=from=%s,src=/home/opam,dst=/mnt/opam-%s \\\n" base base)
+            bases
+      in
+      Printf.fprintf oc {|    cat /mnt/opam-*/epoch > /home/opam/results
 |}
+  in
+  let () =
+    Printf.printf "Executing Dockerfile.basis\n%!";
+    (* XXX bos-ify etc... although there is a tiny benefit that this gives the console!! *)
+    if Sys.command "docker build -f Dockerfile.basis ." <> 0 then begin
+      prerr_endline "Preparing basis failed?!"; raise Exit
+    end
+  in
+  let _ = stack_em_pack_em_and_rack_em opam_repository_sha opam_repository_archive_sha packages excludes tests in
+  ()
 
 let () =
   Lwt_main.run begin
@@ -1260,6 +1687,6 @@ let () =
           Lwt_io.eprintf "opam file not found for %s\n" nv
       | Error `No_packages ->
           Lwt_io.eprintf "Couldn't open packages/ in opam-repository!\n"
-      | _ ->
-          Lwt.return_unit)
+      | e ->
+          Lwt_io.eprintf "Unhandled exception: %s\n" (Printexc.to_string e))
   end

@@ -23,6 +23,9 @@ depends: [
   "tls-lwt"
   "dockerfile-opam"
   "ocaml-version"
+  "bos"
+  "eio_linux"
+  "eio_main"
 ]
 build: [
   ["dune" "subst"] {pinned}
