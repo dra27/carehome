@@ -715,15 +715,19 @@ let distros =
   |> List.sort Dockerfile_opam.Distro.compare
   |> List.map Dockerfile_opam.Distro.resolve_alias
 
-let base_image ic repo_sha archive_sha arch (distro : Dockerfile_opam.Distro.distro) =
+let base_image ic repo_sha archive_sha ?previous arch (distro : Dockerfile_opam.Distro.distro) =
+  let previous =
+    Option.map (Printf.sprintf "COPY --from=%s-update /home/opam/results /home/opam/last\n") previous
+    |> Option.value ~default:""
+  in
   let shims =
     if distro = `Debian `V10 then
-      {|
-  sudo sed -i -e 's/deb\./archive./' /etc/apt/sources.list|}
+      {|sudo sed -i -e 's/deb\./archive./' /etc/apt/sources.list
+    |}
     else if distro = `CentOS `V8 then
-      {|
-  sudo sed -i -e '/^mirrorlist/s/^/#/' \
-              -e 's|^#baseurl=http://mirror\.centos\.org|baseurl=http://vault.centos.org|' /etc/yum.repos.d/CentOS-*|}
+      {|sudo sed -i -e '/^mirrorlist/s/^/#/' \
+              -e 's|^#baseurl=http://mirror\.centos\.org|baseurl=http://vault.centos.org|' /etc/yum.repos.d/CentOS-*
+  |}
     else
       ""
   in
@@ -789,7 +793,7 @@ RUN <<End-of-Script%s
   git checkout 6693-2.4.1
   make cold
 End-of-Script
-FROM %socaml/opam:%s-opam AS %s-%sbase
+FROM %socaml/opam:%s-opam AS %s-%sbase-update
 ENV OPAMYES="1" OPAMCONFIRMLEVEL="unsafe-yes" OPAMERRLOGLEN="0" OPAMPRECISETRACKING="1"
 COPY --from=%s-%s6693-opam /home/opam/opam/opam /usr/bin/opam
 RUN <<End-of-Script%s
@@ -797,14 +801,18 @@ RUN <<End-of-Script%s
   git -C opam-repository checkout %s
   git clone https://github.com/ocaml/opam-repository-archive.git
   git -C opam-repository-archive checkout %s
-  opam update%s
-  opam update --depexts
-  opam repo add --set-default --rank=2 archive opam-repository-archive%s
-  rm -rf /home/opam/.opam/download-cache
   touch results
 End-of-Script
+%sRUN opam update
+FROM %s-%sbase-update AS %s-%sbase
+RUN <<End-of-Script
+  %sopam update --depexts
+  opam repo add --set-default --rank=2 archive opam-repository-archive%s
+  rm -rf /home/opam/.opam/download-cache
+  rm -f /home/opam/last
+End-of-Script
 COPY --from=cache --chown=opam:opam /home/opam/.opam/download-cache /home/opam/.opam/download-cache
-|} platform distro distro key extra_tweaks extra_packages platform distro distro key distro key remote repo_sha archive_sha shims patch
+|} platform distro distro key extra_tweaks extra_packages platform distro distro key distro key remote repo_sha archive_sha previous distro key distro key shims patch
 
 (* XXX Should be memoized - this gets calculated for each dockerfile for no reason *)
 let create_cache_stage oc repo_sha archive_sha packages excludes builds =
@@ -864,17 +872,17 @@ End-of-Script
 #  cp -a /home/opam/.opam/download-cache/* /home/opam/shared-cache/
 #End-of-Script
 |};
-    let f bases (_, arch, (distro : Dockerfile_opam.Distro.distro), _, _, _) =
+    let f ((previous, bases) as acc) (_, arch, (distro : Dockerfile_opam.Distro.distro), _, _, _) =
       let key =
         Dockerfile_opam.Distro.tag_of_distro (distro :> Dockerfile_opam.Distro.t) ^ (if arch = `I386 then "-32bit" else "") ^ "-base"
       in
       if StringSet.mem key bases then
-        bases
+        acc
       else
-        let () = base_image oc repo_sha archive_sha arch distro in
-        StringSet.add key bases
+        let () = base_image oc repo_sha archive_sha ?previous arch distro in
+        Some key, StringSet.add key bases
     in
-    List.fold_left f StringSet.empty builds
+    snd (List.fold_left f (None, StringSet.empty) builds)
 (*
     Printf.fprintf oc {|
 FROM ocaml/opam:ubuntu-25.10-opam AS collect
