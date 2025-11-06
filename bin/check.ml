@@ -1152,15 +1152,20 @@ let generate_test_files opam_repository_sha opam_repository_archive_sha excludes
     let gcc14_reason = Some "Requires GCC < 14.0.0 (to avoid ???)" in
     (* XXX Description needed! default language change? *)
     let gcc15_reason = Some "Requires GCC < 15.0.0 (to avoid ???)" in
+    (* XXX This is totally broken, and should be extended to all platforms!
+           It's always about building 32-bit on a 64-bit system *)
     if requires_32bit name additional_packages then
-      let version, explanation =
+      let debian_version, explanation =
         if StringSet.mem name gcc10 then
           `V10, gcc10_reason
         else
           `V12, Some "Last i386 version of Debian"
       in
-      let distro = `Debian version in
-      [Either.Right (stage_name distro, (*`I386*)`X86_64, distro, explanation, repo, (name :: additional_packages))]
+      let distro = `Debian debian_version in
+      if (Ocaml_version.major version, Ocaml_version.minor version, Option.get (Ocaml_version.patch version)) < (4, 8, 1) then
+        [Either.Left (distro, "Depexts need fixing")]
+      else
+        [Either.Right (stage_name distro, (*`I386*)`X86_64, distro, explanation, repo, (name :: additional_packages))]
     else
       let gcc_constraint =
         if StringSet.mem name gcc10 then
@@ -1241,7 +1246,8 @@ let generate_test_files opam_repository_sha opam_repository_archive_sha excludes
             when is_tsan ->
               (* XXX To be investigated *)
               None, Some "libtsan required?"
-          | Some `Archlinux _
+            (* Weren't some of these working?! *)
+          | Some (`Archlinux _ | `Fedora _ | `OpenSUSE _ | `Debian _ | `Ubuntu _)
             when is_tsan (*List.mem (Ocaml_version.major version, Ocaml_version.minor version, Option.get (Ocaml_version.patch version))
                  [(5, 2, 0); (5, 2, 1); (5, 3, 0); (5, 4, 0)]*) ->
               (* To be investigated... *)
@@ -1295,9 +1301,15 @@ let generate_test_files opam_repository_sha opam_repository_archive_sha excludes
                 (* This is very dirty because Alpine 3.20 has clang 17 but we
                    need 3.17 with clang 15 for these old versions (implicit
                    declarations). We then have to go back to 3.12 to get clang
-                   10 in order not to hit ocmal/ocaml#9981 *)
+                   10 in order not to hit ocaml/ocaml#9981 *)
                 Some (`Alpine `V3_12), Some "clang < 11 needed in order to avoid ocaml/ocaml#9981"
-            | Some (`Fedora _)
+            | Some (`Fedora _) ->
+                (* As for the Alpine! Fedora 39 has clang 17, but we need
+                   Fedora 37 with clang 15 for these old versions (implicit
+                   declarations). We then have to go back to Fedora 32 to get
+                   clang 10 in order not to hit ocaml/ocaml#9981 *)
+                (* XXX Which issue is implicit declarations?! *)
+                Some (`Fedora `V32), Some "clang < 11 needed in order to avoid ocaml/ocaml#9981"
             | None ->
                 distro, explanation
             | Some _ ->
@@ -1544,11 +1556,21 @@ let run_with_result file =
   | Error _ -> ([], 1) (* Don't care... for now... check what this actually means! *)
 *)
 
+module Int64 = struct
+  include Int64
+
+  let incr x = x := add !x 1L
+end
+
 let stack_em_pack_em_and_rack_em opam_repository_sha opam_repository_archive_sha packages excludes builds =
-  let cores = ref 64 in
+  let cores = ref (768 * 2) in
+  let total = List.length builds in
+  let started = ref 0L in
+  let building = ref 0L in
+  let completed = ref 0L in
   let cores_lock = Eio.Mutex.create () in
   let freed = Eio.Condition.create () in
-  let execute env sw (_nv, version, _additional_packages, ((stage, _arch, _distro, _explanation, _repo, _pacakges) as build)) =
+  let execute set_completed set_started set_building env sw (_nv, version, _additional_packages, ((stage, _arch, _distro, _explanation, _repo, _pacakges) as build)) =
     let dockerfile =
       let dockerfile = "Dockerfile.build-" ^ stage in
       Out_channel.with_open_text dockerfile @@ fun oc ->
@@ -1559,7 +1581,7 @@ let stack_em_pack_em_and_rack_em opam_repository_sha opam_repository_archive_sha
     in
     let required =
       if (Ocaml_version.major version, Ocaml_version.minor version) >= (4, 7) then
-        16
+        8
       else
         1
     in
@@ -1575,7 +1597,8 @@ let stack_em_pack_em_and_rack_em opam_repository_sha opam_repository_archive_sha
     in
     let () = acquire required in
     let mgr = Eio.Stdenv.process_mgr env in
-    Printf.printf "Starting %s\n%!" dockerfile;
+    Int64.incr started;
+    set_started 1L;
     let stdout_r, stdout = Eio.Process.pipe mgr ~sw in
     let stderr_r, stderr = Eio.Process.pipe mgr ~sw in
     let proc = Eio.Process.spawn ~sw mgr ~stdout ~stderr ["docker"; "build"; "--output"; "type=cacheonly"; "--progress=plain"; "-f"; dockerfile; "."] in
@@ -1586,11 +1609,13 @@ let stack_em_pack_em_and_rack_em opam_repository_sha opam_repository_archive_sha
         match Eio.Buf_read.line r with
         | line ->
             let seen_done =
-              if String.starts_with ~prefix:"#1 DONE " line then begin
-                Printf.printf "Building %s\n%!" dockerfile;
-                true
-              end else
-                seen_done
+              match String.split_on_char ' ' line with
+              | _ :: seg :: _ when String.starts_with ~prefix:"[test-" seg && not seen_done ->
+                  Int64.incr building;
+                  set_building 1L;
+                  true
+              | _ ->
+                  seen_done
             in
             lines := line :: !lines;
             loop seen_done
@@ -1610,6 +1635,10 @@ let stack_em_pack_em_and_rack_em opam_repository_sha opam_repository_archive_sha
         (fun () -> stderr_lines := read_lines stderr_r)
     in
     let status = Eio.Process.await proc in
+    (* Finish processing stderr/stdout *)
+    Eio.Fiber.yield ();
+    Eio.Flow.close stdout_r;
+    Eio.Flow.close stderr_r;
     let result =
       match status with
       | `Exited n -> n
@@ -1618,12 +1647,31 @@ let stack_em_pack_em_and_rack_em opam_repository_sha opam_repository_archive_sha
     Eio.Mutex.use_rw ~protect:false cores_lock @@ fun () ->
       cores := !cores + required;
       Eio.Condition.broadcast freed;
+      Int64.incr completed;
+(*
+      Progress.interject_with (fun () -> Printf.printf "%d remain\n%!" (total - Int64.to_int !completed));
+*)
+      set_completed 1L;
+(*
       Printf.printf "Completed %s with exit code %d\n" dockerfile result;
+*)
+      if result <> 0 then
+        Progress.interject_with (fun () -> Printf.printf "%s: exited with code %d\n%!" dockerfile result);
       result
   in
   Eio_main.run @@ fun env ->
     Eio.Switch.run @@ fun sw ->
-      Eio.Fiber.List.map (execute env sw) builds
+      Printf.printf "Total builds: %d\n%!" total;
+      let layout =
+        let open Progress.Multi in
+        let total = Int64.of_int total in
+        let _pp = Progress.Printer.create ~width:4 ~to_string:Int64.to_string ~string_len:4 () in
+        line (Progress.counter ~message:"Completed:" total) ++
+        line (Progress.counter ~message:"Started:  " total) ++
+        line (Progress.counter ~message:"Building: " total)
+      in
+      Progress.with_reporters layout @@ fun completed started building ->
+        Eio.Fiber.List.map (execute completed started building env sw) builds
 
 let main () =
   (* Analyse the Git repositories and return the complete list of analysed opam

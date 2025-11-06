@@ -26,6 +26,7 @@ depends: [
   "bos"
   "eio_linux"
   "eio_main"
+  "progress"
 ]
 build: [
   ["dune" "subst"] {pinned}
